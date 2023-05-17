@@ -15,9 +15,15 @@ import { api } from "~/utils/api";
 // import { api } from "~/utils/api";
 
 const Home: NextPage = () => {
-  // const hello = api.example.hello.useQuery({ text: "from tRPC" });
   const user = useUser();
-  // const track  = api.tracks.getFirst.useQuery();
+  // const hello = api.example.hello.useQuery({ text: "from tRPC" });
+  // const result  = api.tracks.getFirst.useQuery();
+  // const dbData = result.data
+  // if (dbData) {
+  //   // const track = new Track(dbData.name, dbData.author, dbData.lengthSeconds)
+  //   const track = trackDataToClass(dbData)
+  // }
+
 
   return (
     <>

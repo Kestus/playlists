@@ -11,19 +11,40 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Example {
+// model Example {
+//   id        String   @id @default(cuid())
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+model TrackSchema {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  name          String           @db.VarChar(255)
+  artists       ArtistSchema[]
+  playlists     PlaylistSchema[]
+  lengthSeconds Int              @db.SmallInt
+  idSpotify     String?          @unique @db.VarChar(255)
 }
 
-model Track {
+model ArtistSchema {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name          String @db.TinyText
-  author        String @db.TinyText
-  lengthSeconds Int    @db.SmallInt
-  idSpotify     String @db.TinyText
+  name      String        @db.VarChar(255)
+  idSpotify String?       @unique @db.VarChar(255)
+  tracks    TrackSchema[]
+}
+
+model PlaylistSchema {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String        @db.VarChar(255)
+  idSpotify String?       @unique @db.VarChar(255)
+  tracks    TrackSchema[]
 }
