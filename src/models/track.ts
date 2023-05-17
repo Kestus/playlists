@@ -1,4 +1,4 @@
-import { TrackSchema } from "@prisma/client";
+// import { TrackSchema } from "@prisma/client";
 
 export class Track {
   name: string;
@@ -11,7 +11,7 @@ export class Track {
     name: string,
     author: string,
     lenghtSeconds: number,
-    playlists?: string,
+    // playlists?: string,
     idSpotify?: string
   ) {
     this.name = name;
@@ -25,7 +25,6 @@ export class Track {
     return this.name;
   }
 
-  makeClass(dbData: object) {}
 }
 
 // export function trackDataToClass(TrackData: TrackSchema): Track {
