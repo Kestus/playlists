@@ -1,4 +1,4 @@
-import { Artists } from "@prisma/client";
+import { type Artists } from "@prisma/client";
 
 export class Artist {
   id: string;

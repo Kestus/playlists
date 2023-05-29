@@ -3,8 +3,6 @@ import {
   SignInButton,
   // SignedOut,
   UserButton,
-  UserProfile,
-  useOrganizationList,
   useUser,
 } from "@clerk/nextjs";
 import { type NextPage } from "next";
