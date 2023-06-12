@@ -1,29 +1,25 @@
 import { type NextPage } from "next";
 import { useRouter } from "next/router";
-import Custom404page from "~/components/error/404";
+import ErrorPage from "~/components/error";
 
 import Navbar from "~/components/navbar";
+import Loading from "~/components/placeholders/loading";
 import { api } from "~/utils/api";
 
 const ProfilePage: NextPage = () => {
   const { slug } = useRouter().query;
   if (slug == undefined) {
-    return <></>;
+    return <ErrorPage />;
   }
   const username = slug as string;
   const { data, isLoading, isError, error } =
     api.profile.getUserByUsername.useQuery({ username: username });
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loading />;
   }
   if (isError) {
-    return (
-      <div>
-        <Custom404page />
-        <span>{error.message}</span>
-      </div>
-    );
+    return <ErrorPage code={error.data?.httpStatus} message={error.message} />;
   }
 
   return (

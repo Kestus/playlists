@@ -1,9 +1,14 @@
 import { SignIn } from "@clerk/clerk-react";
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import NavbarSkeleton from "./placeholders/navbarSkeleton";
 
 const Navbar = () => {
   const user = useUser();
+  if (!user.isLoaded) {
+    return <NavbarSkeleton />;
+  }
+
   return (
     <>
       <header className="sticky top-0 flex h-12 flex-row items-center gap-4 bg-green-200 px-2">
@@ -36,6 +41,6 @@ const Navbar = () => {
       </header>
     </>
   );
-}
+};
 
 export default Navbar;
