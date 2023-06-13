@@ -8,6 +8,7 @@ import { httpBatchLink, loggerLink } from "@trpc/client";
 import { createTRPCNext } from "@trpc/next";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import superjson from "superjson";
+import { z } from "zod";
 
 import { type AppRouter } from "~/server/api/root";
 
@@ -20,11 +21,12 @@ const getBaseUrl = () => {
 /**
  * SPOTIFY ACCESS TOKEN
  */
-import { fetchAccessToken } from "~/server/api/routers/spotify";
-
 let spotifyAccessToken: string;
-export async function setSpotifyAccessToken() {
-  spotifyAccessToken = await fetchAccessToken();
+const tokenForm = z.object({ token: z.string(), expires: z.number()})
+export function setSpotifyAccessTokenHeader(newTokenData: object) {
+  const validData = tokenForm.parse(newTokenData)
+  const { token, expires } = validData;
+  spotifyAccessToken = `${token}:${expires}`
 }
 
 /** A set of type-safe react-query hooks for your tRPC API. */
@@ -53,7 +55,7 @@ export const api = createTRPCNext<AppRouter>({
           url: `${getBaseUrl()}/api/trpc`,
           headers() {
             return {
-              spotifyAccessToken: spotifyAccessToken,
+              spotify_access_token: spotifyAccessToken,
             };
           },
         }),

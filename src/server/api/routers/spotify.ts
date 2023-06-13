@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { setSpotifyAccessTokenHeader } from "~/utils/api";
+import { type IncomingHttpHeaders } from "http";
 
 export const spotifyRouter = createTRPCRouter({
   getPlaylist: publicProcedure
@@ -13,8 +15,8 @@ export const spotifyRouter = createTRPCRouter({
     .query(async ({ input }) => {
       return fetchPlaylist(input.spotifyPlaylistId, input.spotifyAccessToken);
     }),
-  getAccessToken: publicProcedure.mutation(() => {
-    return fetchAccessToken();
+  getAccessToken: publicProcedure.mutation(({ ctx }) => {
+    return getAccessToken(ctx.req.headers);
   }),
 });
 
@@ -56,23 +58,37 @@ export const fetchAccessToken = () => {
       }
       return response.json();
     })
-    .then(({ access_token }) => {      
-      const token: string | undefined = typeof access_token === "string" ? access_token : undefined
+    .then(({ access_token }) => {
+      const token: string | undefined =
+        typeof access_token === "string" ? access_token : undefined;
       if (token === undefined) {
-        throw new TRPCError({code:"INTERNAL_SERVER_ERROR"})
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
       const expires = Date.now() + 3600000;
-      return `${token}:${expires}`;
+      return { token, expires };
     });
 
   return res;
 };
 
-// userside function
-export const getAccessToken = () => {
-  // const token = localStorage.getItem("spotifyAccessTokenExpiration")
-  // createCookie("yep", {token: "erqw", expires: Date.now()})
+const getAccessToken = async (headers: IncomingHttpHeaders) => {
+  const header = headers["spotify_access_token"] as string;
+  if (header === "undefined") {
+    const { token } = await getNewAccessToken();
+    return token;
+  }
 
-  console.log("yep");
+  const [token, expires] = header.split(":");
+  if (!token || !expires) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  } else if (Date.now() > Number(expires)) { //check if token is expired
+    return await getNewAccessToken();
+  } else return token;
+};
+
+const getNewAccessToken = async () => {
+  const newTokenData = await fetchAccessToken();
+  setSpotifyAccessTokenHeader(newTokenData);
+  return newTokenData;
 };
