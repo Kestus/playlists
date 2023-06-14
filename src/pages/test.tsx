@@ -1,5 +1,6 @@
 import { type NextPage } from "next";
 import Navbar from "~/components/navbar";
+import { api } from "~/utils/api";
 
 
 const Test: NextPage = () => {
@@ -8,21 +9,22 @@ const Test: NextPage = () => {
   //   return <Loading />;
   // }
 
-  // const { mutate, data } = api.spotify.getAccessToken.useMutation();
-
+  const { mutate, data } = api.spotify.getAccessToken.useMutation();
+  
   return (
     <section>
       <Navbar />
       <div className="flex flex-col items-center gap-10 pt-40">
-        <button className="rounded-full bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700">
+        <button onClick={() => mutate()}
+        className="rounded-full bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700">
           yep
         </button>
         <br />
-        {/* {data && (
+        {data && (
           <span className="text rounded-md border-4 border-emerald-400 bg-indigo-200 p-10 text-lg text-slate-700">
             {data}
           </span>
-        )} */}
+        )}
       </div>
     </section>
   );

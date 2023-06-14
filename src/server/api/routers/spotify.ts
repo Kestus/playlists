@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { setSpotifyAccessTokenHeader } from "~/utils/api";
-import { type IncomingHttpHeaders } from "http";
+import cookie from "cookie";
+
+
+const COOKIE_KEY = "spotify_access_token";
 
 export const spotifyRouter = createTRPCRouter({
   getPlaylist: publicProcedure
@@ -15,8 +17,21 @@ export const spotifyRouter = createTRPCRouter({
     .query(async ({ input }) => {
       return fetchPlaylist(input.spotifyPlaylistId, input.spotifyAccessToken);
     }),
-  getAccessToken: publicProcedure.mutation(({ ctx }) => {
-    return getAccessToken(ctx.req.headers);
+  getAccessToken: publicProcedure.mutation(async ({ ctx }) => {
+    const browserCookie = ctx.req.cookies[COOKIE_KEY];
+    if (browserCookie) return browserCookie;
+
+    const newToken = await fetchAccessToken();
+    ctx.res.setHeader(
+      "Set-Cookie",
+      cookie.serialize(COOKIE_KEY, newToken, {
+        maxAge: 60 * 59, // 59 minutes
+        sameSite: "strict",
+        path: "/",
+        httpOnly: true,
+      })
+    );
+    return newToken;
   }),
 });
 
@@ -32,9 +47,9 @@ const fetchPlaylist = async (
 };
 
 export const fetchAccessToken = () => {
-  const apiKey = process.env.API_KEY_SPOTIFY;
-  const apiSecret = process.env.API_SECRET_SPOTIFY;
-  if (!apiKey || !apiSecret) {
+  const API_KEY = process.env.API_KEY_SPOTIFY;
+  const API_SECRET = process.env.API_SECRET_SPOTIFY;
+  if (!API_KEY || !API_SECRET) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
     });
@@ -45,7 +60,7 @@ export const fetchAccessToken = () => {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: `grant_type=client_credentials&client_id=${apiKey}&client_secret=${apiSecret}`,
+    body: `grant_type=client_credentials&client_id=${API_KEY}&client_secret=${API_SECRET}`,
   };
 
   const res = fetch("https://accounts.spotify.com/api/token", options)
@@ -64,31 +79,8 @@ export const fetchAccessToken = () => {
       if (token === undefined) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
-
-      const expires = Date.now() + 3600000;
-      return { token, expires };
+      return token;
     });
 
   return res;
-};
-
-const getAccessToken = async (headers: IncomingHttpHeaders) => {
-  const header = headers["spotify_access_token"] as string;
-  if (header === "undefined") {
-    const { token } = await getNewAccessToken();
-    return token;
-  }
-
-  const [token, expires] = header.split(":");
-  if (!token || !expires) {
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-  } else if (Date.now() > Number(expires)) { //check if token is expired
-    return await getNewAccessToken();
-  } else return token;
-};
-
-const getNewAccessToken = async () => {
-  const newTokenData = await fetchAccessToken();
-  setSpotifyAccessTokenHeader(newTokenData);
-  return newTokenData;
 };
