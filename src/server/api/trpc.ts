@@ -18,18 +18,24 @@ import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 
 import { prisma } from "~/server/db";
 
-// type CreateContextOptions = Record<string, never>;
-
 /**
- * This is the actual context you will use in your router. It will be used to process every request
- * that goes through your tRPC endpoint.
+ * This helper generates the "internals" for a tRPC context. If you need to use it, you can export
+ * it from here.
  *
- * @see https://trpc.io/docs/context
+ * Examples of things you may need it for:
+ * - testing, so we don't have to mock Next.js' req/res
+ * - tRPC's `createSSGHelpers`, where we don't have req/res
+ *
+ * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
-export const createTRPCContext = (opts: CreateNextContextOptions) => {
+
+export const createInnerTRPCContext = (
+  opts?: CreateNextContextOptions
+) => {
+  if (!opts) return { prisma };
+
   const { req, res } = opts;
   const { user } = getAuth(req);
-
   return {
     prisma,
     session: user,
@@ -37,6 +43,23 @@ export const createTRPCContext = (opts: CreateNextContextOptions) => {
     res,
   };
 };
+
+/**
+ * This is the actual context you will use in your router. It will be used to process every request
+ * that goes through your tRPC endpoint.
+ *
+ * @see https://trpc.io/docs/context
+ */
+
+export const createTRPCContext = (opts: CreateNextContextOptions) => {
+  return createInnerTRPCContext(opts);
+};
+
+/**
+ * Infer TRPCContext type from InnerTRPCContext
+ */
+// import { inferAsyncReturnType } from "@trpc/server";
+// export type TRPCContext = inferAsyncReturnType<typeof createInnerTRPCContext>;
 
 /**
  * 2. INITIALIZATION
@@ -85,7 +108,20 @@ export const createTRPCRouter = t.router;
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure;
+export const procedure = t.procedure;
+
+export const publicProcedure = procedure.use((opts) => {
+  if (!opts.ctx.req || !opts.ctx.res) {
+    throw new Error("You are missing `req` or `res` in your call.");
+  }
+  return opts.next({
+    ctx: {
+      // We overwrite the context with the truthy `req` & `res`, which will also overwrite the types used in your procedure.
+      req: opts.ctx.req,
+      res: opts.ctx.res,
+    },
+  });
+});
 
 const enforceUserIsAuthorized = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session) {

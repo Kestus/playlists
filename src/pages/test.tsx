@@ -1,4 +1,3 @@
-import { useUser } from "@clerk/nextjs";
 import { type NextPage } from "next";
 import Navbar from "~/components/navbar";
 import Loading from "~/components/placeholders/loading";
@@ -6,7 +5,7 @@ import { api } from "~/utils/api";
 
 const Test: NextPage = () => {
   const { data: token, isLoading } = api.spotify.getAccessToken.useQuery();
-  let { mutate: fetchPlaylist, data: playlist } =
+  const { mutate: fetchPlaylist, data: playlist } =
     api.spotify.getPlaylist.useMutation();
 
   if (isLoading || !token) return <Loading />;

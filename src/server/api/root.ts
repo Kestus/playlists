@@ -3,6 +3,7 @@ import { tracksRouter } from "./routers/tracks";
 import { testRouter } from "./routers/test";
 import { profileRouter } from "./routers/profile";
 import { spotifyRouter } from "./routers/spotify";
+import { contextRouter } from "./routers/context";
 
 /**
  * This is the primary router for your server.
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   test: testRouter,
   profile: profileRouter,
   spotify: spotifyRouter,
+  context: contextRouter,
 });
 
 // export type definition of API

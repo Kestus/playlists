@@ -34,13 +34,13 @@ export class Track {
   async fetchArtists(): Promise<Artist[] | null> {
     const res = await prisma.tracks.findUnique({
       where: { id: this.id },
-      include: { artists: true },
+      include: { Artists: true },
     });
     if (res == null) {
       return null;
     }
 
-    res.artists.forEach((item) => {
+    res.Artists.forEach((item) => {
       const artist = artistDataToClass(item);
       this.addArtist(artist);
     });

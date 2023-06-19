@@ -2,22 +2,36 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import cookie from "cookie";
-
+import { playlistValidator } from "./zod/validators";
+import { savePlaylistResponse } from "~/server/models/playlist";
 
 const COOKIE_KEY = "spotify_access_token";
+
+// TODO:
+// getPlaylist
+// check database by playlist id
+// if exists
+//    return class
+// else...
+// fetch playlist (100 tracks limit)
+//  fetch additional tracks if needed
+// save result to database
+// create class
+// return class
 
 export const spotifyRouter = createTRPCRouter({
   getPlaylist: publicProcedure
     .input(
       z.object({
-        spotifyPlaylistId: z.string(),
+        url: z.string(),
         spotifyAccessToken: z.string(),
       })
     )
-    .query(async ({ input }) => {
-      return fetchPlaylist(input.spotifyPlaylistId, input.spotifyAccessToken);
+    .mutation(async ({ input }) => {
+      return await fetchPlaylist(input.url, input.spotifyAccessToken);
     }),
-  getAccessToken: publicProcedure.mutation(async ({ ctx }) => {
+
+  getAccessToken: publicProcedure.query(async ({ ctx }) => {
     const browserCookie = ctx.req.cookies[COOKIE_KEY];
     if (browserCookie) return browserCookie;
 
@@ -34,16 +48,36 @@ export const spotifyRouter = createTRPCRouter({
     return newToken;
   }),
 });
-
 export type SpotifyRouter = typeof spotifyRouter;
 
-const fetchPlaylist = async (
-  spotifyPlaylistId: string,
-  spotifyAccessToken: string
-) => {
-  const res = await fetch(`${spotifyPlaylistId}, ${spotifyAccessToken}`);
-  console.log(res);
-  return "yep";
+
+const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
+  const splitUrl = url.split("/");
+  const length = splitUrl.length;
+  const indexOfId = length - 1;
+  const indexOfType = length - 2;
+  const type = splitUrl[indexOfType];
+  const playlistId = splitUrl[indexOfId];
+  if (!type || !playlistId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Wrong URL",
+    });
+  }
+
+  const endPoint = `https://api.spotify.com/v1/${type}s/${playlistId}`;
+  const options = {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${spotifyAccessToken}`,
+    },
+  };
+
+  const response = await fetchSpotify(endPoint, options);  
+  const resPlaylist = playlistValidator.parse(response)
+  const playlist = await savePlaylistResponse(resPlaylist)
+
+  return playlist;
 };
 
 export const fetchAccessToken = () => {
@@ -81,6 +115,25 @@ export const fetchAccessToken = () => {
       }
       return token;
     });
+
+  return res;
+};
+
+const fetchSpotify = async (
+  apiEndpoint: string,
+  options: object,
+  // offset: number = 0
+) => {
+  const res = await fetch(apiEndpoint, options)
+    .then((response) => {
+      if (!response.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: response.statusText,
+        });
+      }
+      return response.json() as object;
+    })
 
   return res;
 };

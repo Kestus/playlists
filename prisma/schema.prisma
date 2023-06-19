@@ -16,11 +16,13 @@ model Tracks {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name          String      @db.VarChar(255)
-  lengthSeconds Int         @db.SmallInt
-  idSpotify     String?     @unique @db.VarChar(255)
-  artists       Artists[]
-  playlists     Playlists[]
+  name          String  @db.VarChar(255)
+  lengthSeconds Int     @db.SmallInt
+  spotifyId     String? @unique @db.VarChar(255)
+  image         String?  @db.VarChar(255)
+
+  Artists   Artists[]
+  Playlists Playlists[]
 
   @@index([id, name])
 }
@@ -30,9 +32,12 @@ model Artists {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name      String   @db.VarChar(255)
-  idSpotify String?  @unique @db.VarChar(255)
-  tracks    Tracks[]
+  name      String  @db.VarChar(255)
+  spotifyId String? @unique @db.VarChar(255)
+  image     String?  @db.VarChar(255)
+
+  Tracks    Tracks[]
+  Playlists Playlists[]
 
   @@index([id, name])
 }
@@ -42,9 +47,13 @@ model Playlists {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name      String   @db.VarChar(255)
-  idSpotify String?  @unique @db.VarChar(255)
-  tracks    Tracks[]
+  name      String  @db.VarChar(255)
+  spotifyId String? @unique @db.VarChar(255)
+  image     String?  @db.VarChar(255)
+  type      String  @db.VarChar(255)
+
+  Artists Artists[]
+  Tracks  Tracks[]
 
   @@index([id, name])
 }
