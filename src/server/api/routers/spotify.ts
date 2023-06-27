@@ -2,8 +2,16 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import cookie from "cookie";
-import { playlistValidator } from "./zod/validators";
-import { savePlaylistResponse } from "~/server/models/playlist";
+import {
+  playlistItemsValidator,
+  playlistValidator,
+  trackValidator,
+  type zodArrayOfItems,
+  type zodTrack,
+} from "./zod/validators";
+
+// import { promises as fs } from "fs";
+// fs.writeFile("dataArray_.json", JSON.stringify(arrayOfTracks, null, 4))
 
 const COOKIE_KEY = "spotify_access_token";
 
@@ -20,7 +28,7 @@ const COOKIE_KEY = "spotify_access_token";
 // return class
 
 export const spotifyRouter = createTRPCRouter({
-  getPlaylist: publicProcedure
+  fetchPlaylist: publicProcedure
     .input(
       z.object({
         url: z.string(),
@@ -50,20 +58,8 @@ export const spotifyRouter = createTRPCRouter({
 });
 export type SpotifyRouter = typeof spotifyRouter;
 
-
 const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
-  const splitUrl = url.split("/");
-  const length = splitUrl.length;
-  const indexOfId = length - 1;
-  const indexOfType = length - 2;
-  const type = splitUrl[indexOfType];
-  const playlistId = splitUrl[indexOfId];
-  if (!type || !playlistId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Wrong URL",
-    });
-  }
+  const { type, playlistId } = splitUrl(url);
 
   const endPoint = `https://api.spotify.com/v1/${type}s/${playlistId}`;
   const options = {
@@ -73,14 +69,51 @@ const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
     },
   };
 
-  const response = await fetchSpotify(endPoint, options);  
-  const resPlaylist = playlistValidator.parse(response)
-  const playlist = await savePlaylistResponse(resPlaylist)
+  const fields = `?fields=total_tracks,release_date,type,genres,artists,id,images,name,tracks%28total%29`;
+  const playlistInfoEndPoint = `${endPoint}${fields}`;
+  const response = await fetchSpotify(playlistInfoEndPoint, options);
 
-  return playlist;
+  const playlist = playlistValidator.parse(response);
+  const tracks = await fetchTracks(endPoint, options);
+
+  console.log(playlist)
+  console.log(tracks)
+  // TODO: save playlist data and tracks
+  // const playlist = await savePlaylistResponse(playlistData);
+  return "playlist";
 };
 
-export const fetchAccessToken = () => {
+const fetchTracks = async (apiEndpoint: string, options: object) => {
+  let nextTracksEndpoint:
+    | string
+    | undefined
+    | null = `${apiEndpoint}/tracks?offset=0&limit=100`;
+
+  const arrayOfTracks = new Array<zodTrack>();
+  while (typeof nextTracksEndpoint === "string") {
+    const response = await fetchSpotify(nextTracksEndpoint, options);
+    const parsedRes = playlistItemsValidator.parse(response);
+
+    nextTracksEndpoint = parsedRes.next;
+    const newTracks = parseAndFilterTracks(parsedRes.items);
+
+    arrayOfTracks.push(...newTracks);
+  }
+  return arrayOfTracks;
+};
+
+const parseAndFilterTracks = (items: zodArrayOfItems) => {
+  const arrayOfTracks = new Array<zodTrack>();
+  for (const item of items) {
+    const track = trackValidator.safeParse(item.track);
+    if (track.success) {
+      arrayOfTracks.push(track.data);
+    }
+  }
+  return arrayOfTracks;
+};
+
+const fetchAccessToken = () => {
   const API_KEY = process.env.API_KEY_SPOTIFY;
   const API_SECRET = process.env.API_SECRET_SPOTIFY;
   if (!API_KEY || !API_SECRET) {
@@ -119,21 +152,33 @@ export const fetchAccessToken = () => {
   return res;
 };
 
-const fetchSpotify = async (
-  apiEndpoint: string,
-  options: object,
-  // offset: number = 0
-) => {
-  const res = await fetch(apiEndpoint, options)
-    .then((response) => {
-      if (!response.ok) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: response.statusText,
-        });
-      }
-      return response.json() as object;
-    })
+const fetchSpotify = async (apiEndpoint: string, options: object) => {
+  options;
+  const res = await fetch(apiEndpoint, options).then((response) => {
+    if (!response.ok) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: response.statusText,
+      });
+    }
+    return response.json() as object;
+  });
 
   return res;
+};
+
+const splitUrl = (url: string) => {
+  const splitUrl = url.split("/");
+  const length = splitUrl.length;
+  const indexOfId = length - 1;
+  const indexOfType = length - 2;
+  const type = splitUrl[indexOfType];
+  const playlistId = splitUrl[indexOfId];
+  if (!type || !playlistId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Wrong URL",
+    });
+  }
+  return { type, playlistId };
 };

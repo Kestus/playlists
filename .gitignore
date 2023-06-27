@@ -41,5 +41,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-test.json
-playlist.json
+
+*_.json

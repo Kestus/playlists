@@ -4,24 +4,34 @@ import Loading from "~/components/placeholders/loading";
 import { api } from "~/utils/api";
 
 const Test: NextPage = () => {
-  const { data: token, isLoading } = api.spotify.getAccessToken.useQuery();
-  const { mutate: fetchPlaylist, data: playlist } =
-    api.spotify.getPlaylist.useMutation();
+  // const { data: token, isLoading } = api.spotify.getAccessToken.useQuery();
+  // const { mutate: fetchPlaylist, data: playlist } =
+  //   api.spotify.getPlaylist.useMutation();
 
-  if (isLoading || !token) return <Loading />;
+  // if (isLoading || !token) return <Loading />;
+  // const URL = "https://open.spotify.com/album/4M2Mf4pmARKGVT9MLCe3HA"
+  const URL = "https://open.spotify.com/playlist/7anUioMjAs7XmGF5NDCl1I";
+  const {mutate: getPlaylist, data: playlist} = api.spotify.fetchPlaylist.useMutation()
+  const {data: token} = api.spotify.getAccessToken.useQuery()
+  if (!token) {
+    return <Loading />
+  }
+
   
-  const URL = "https://open.spotify.com/playlist/3gW3MRRNkjlnbrwC8LVE9H";
-  
-  const fetch = () => {
-    fetchPlaylist({ url: URL, spotifyAccessToken: token });
-  };
+
+  // const fetch = () => {
+  //   fetchPlaylist({ url: URL, spotifyAccessToken: token });
+  // };
+  // const mapObject = (data: object) => {
+  //   data.
+  // }
 
   return (
     <section>
       <Navbar />
       <div className="flex flex-col items-center gap-10 pt-40">
         <button
-          onClick={() => fetch()}
+          onClick={() => getPlaylist({url: URL, spotifyAccessToken: token})}
           className="rounded-full bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
         >
           yep

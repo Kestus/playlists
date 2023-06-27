@@ -1,15 +1,14 @@
 import { type Artists } from "@prisma/client";
 
 export class Artist {
-  id: string;
-  name: string;
+  data: Artists
 
-  constructor(id: string, name: string) {
-    this.id = id;
-    this.name = name;
+  constructor(dbEntry: Artists) {
+    this.data = dbEntry;
   }
+
+  getName() { return this.data.name }
+
+  //TODO
 }
 
-export function artistDataToClass(data: Artists): Artist {
-  return new Artist(data.id, data.name);
-}
