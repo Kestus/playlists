@@ -1,14 +1,26 @@
 import { type Artists } from "@prisma/client";
+import { type dbEntry } from "./interface/dbEntry";
 
-export class Artist {
-  data: Artists
+export class Artist implements dbEntry {
+  data: Artists;
 
   constructor(dbEntry: Artists) {
     this.data = dbEntry;
   }
 
-  getName() { return this.data.name }
+  // getters
+  getId() {
+    return this.data.id;
+  }
+  getName() {
+    return this.data.name
+  }
+  getSpotifyId() {
+    return this.data.spotifyId
+  }
+  getImage() {
+    return this.data.image
+  }
 
   //TODO
 }
-

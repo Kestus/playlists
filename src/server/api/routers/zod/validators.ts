@@ -23,13 +23,13 @@ const zodAlbum = z.object({
   artists: z.array(zodArtist),
 });
 
-//TODO: some album data or if is missing
 const zodTrack = z.object({
   album: zodAlbum,
-  artists: z.array(zodArtist).optional(),
+  artists: z.array(zodArtist),
   id: z.string(),
   name: z.string(),
   type: z.string(),
+  duration_ms: z.number(),
 });
 
 const zodPlaylist = z.object({
@@ -38,7 +38,7 @@ const zodPlaylist = z.object({
   images: z.array(zodImage),
   name: z.string(),
   release_date: z.string().nullish(),
-  type: z.string(),
+  type: z.enum(["playlist", "album"]),
   genres: z.array(z.string()).nullish(),
   artists: z.array(zodArtist).nullish(),
 });
@@ -62,3 +62,4 @@ export { zodTrack as trackValidator };
 export type zodTrack = z.infer<typeof zodTrack>;
 
 export type zodArrayOfItems = z.infer<typeof zodArrayOfItems>;
+export type zodArtist = z.infer<typeof zodArtist>;

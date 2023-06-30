@@ -9,6 +9,8 @@ import {
   type zodArrayOfItems,
   type zodTrack,
 } from "./zod/validators";
+import { savePlaylistAndTracks } from "prisma/spotifyMethods/prismaPlaylists";
+import { saveAlbumAndTracks } from "prisma/spotifyMethods/prismaAlbums";
 
 // import { promises as fs } from "fs";
 // fs.writeFile("dataArray_.json", JSON.stringify(arrayOfTracks, null, 4))
@@ -73,13 +75,19 @@ const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
   const playlistInfoEndPoint = `${endPoint}${fields}`;
   const response = await fetchSpotify(playlistInfoEndPoint, options);
 
-  const playlist = playlistValidator.parse(response);
-  const tracks = await fetchTracks(endPoint, options);
-
-  console.log(playlist)
-  console.log(tracks)
+  const playlistData = playlistValidator.parse(response);
+  const tracksData = await fetchTracks(endPoint, options);
+  
+  
   // TODO: save playlist data and tracks
   // const playlist = await savePlaylistResponse(playlistData);
+
+  const playlist =
+    playlistData.type === "album"
+      ? saveAlbumAndTracks(playlistData, tracksData)
+      : savePlaylistAndTracks(playlistData, tracksData);
+
+  console.log(playlist)
   return "playlist";
 };
 
@@ -99,13 +107,14 @@ const fetchTracks = async (apiEndpoint: string, options: object) => {
 
     arrayOfTracks.push(...newTracks);
   }
+
   return arrayOfTracks;
 };
 
 const parseAndFilterTracks = (items: zodArrayOfItems) => {
   const arrayOfTracks = new Array<zodTrack>();
-  for (const item of items) {
-    const track = trackValidator.safeParse(item.track);
+  for (let i = 0; i < items.length; i++) {
+    const track = trackValidator.safeParse(items[i]?.track);
     if (track.success) {
       arrayOfTracks.push(track.data);
     }

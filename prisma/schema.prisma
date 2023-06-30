@@ -19,12 +19,15 @@ model Tracks {
   name          String  @db.VarChar(255)
   lengthSeconds Int     @db.SmallInt
   spotifyId     String? @unique @db.VarChar(255)
-  image         String?  @db.VarChar(255)
 
-  Artists   Artists[]
-  Playlists Playlists[]
+  Artists    Artists[]
+  Playlists  Playlists[]
+  Album      Albums      @relation(fields: [albumId, albumImage], references: [id, image])
+  albumId    String
+  albumImage String
 
-  @@index([id, name])
+  @@index([id, spotifyId])
+  @@index([albumId, albumImage])
 }
 
 model Artists {
@@ -34,26 +37,50 @@ model Artists {
 
   name      String  @db.VarChar(255)
   spotifyId String? @unique @db.VarChar(255)
-  image     String?  @db.VarChar(255)
+  image     String? @db.VarChar(255)
 
   Tracks    Tracks[]
-  Playlists Playlists[]
+  Albums    Albums[]
 
-  @@index([id, name])
+  @@index([id])
+  @@index([spotifyId])
+}
+
+enum PlaylistType {
+  playlist
+  album
 }
 
 model Playlists {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  type      PlaylistType @default(playlist)
 
   name      String  @db.VarChar(255)
   spotifyId String? @unique @db.VarChar(255)
-  image     String?  @db.VarChar(255)
-  type      String  @db.VarChar(255)
+  image     String? @db.VarChar(255)
+
+  Tracks  Tracks[]
+
+  @@index([id])
+  @@index([spotifyId])
+}
+
+model Albums {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  type      PlaylistType @default(album)
+
+  name      String  @db.VarChar(255)
+  spotifyId String? @unique @db.VarChar(255)
+  image     String? @db.VarChar(255)
 
   Artists Artists[]
   Tracks  Tracks[]
 
-  @@index([id, name])
+  @@unique([id, image])
+  @@index([id])
+  @@index([spotifyId])
 }
