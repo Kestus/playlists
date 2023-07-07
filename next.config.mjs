@@ -2,10 +2,11 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
+import { withAxiom } from "next-axiom";
 await import("./src/env.mjs");
 
 /** @type {import("next").NextConfig} */
-const config = {
+const config = withAxiom({
   reactStrictMode: true,
 
   /**
@@ -18,5 +19,17 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
-};
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "mosaic.scdn.co",
+      },
+      {
+        protocol: "https",
+        hostname: "i.scdn.co",
+      },
+    ],
+  },
+});
 export default config;

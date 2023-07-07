@@ -3,7 +3,7 @@ import { testRouter } from "./routers/test";
 import { profileRouter } from "./routers/profile";
 import { spotifyRouter } from "./routers/spotify";
 import { contextRouter } from "./routers/context";
-import { prismaRouter } from "./routers/prisma";
+import { playlistsRouter } from "./routers/prisma/playlists";
 
 /**
  * This is the primary router for your server.
@@ -11,7 +11,7 @@ import { prismaRouter } from "./routers/prisma";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  prisma: prismaRouter,
+  prismaPlaylists: playlistsRouter,
   test: testRouter,
   profile: profileRouter,
   spotify: spotifyRouter,

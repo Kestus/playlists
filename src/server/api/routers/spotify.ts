@@ -6,11 +6,11 @@ import {
   playlistItemsValidator,
   playlistValidator,
   trackValidator,
-  type zodArrayOfItems,
-  type zodTrack,
 } from "./zod/validators";
+import type { zodPlaylist, zodArrayOfItems, zodTrack } from "./zod/validators";
 import { savePlaylistAndTracks } from "prisma/spotifyMethods/prismaPlaylists";
 import { saveAlbumAndTracks } from "prisma/spotifyMethods/prismaAlbums";
+import { log } from "next-axiom";
 
 // import { promises as fs } from "fs";
 // fs.writeFile("dataArray_.json", JSON.stringify(arrayOfTracks, null, 4))
@@ -62,6 +62,7 @@ export type SpotifyRouter = typeof spotifyRouter;
 
 const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
   const { type, playlistId } = splitUrl(url);
+  log.info(`Fetching playlist ${playlistId}...`);
 
   const endPoint = `https://api.spotify.com/v1/${type}s/${playlistId}`;
   const options = {
@@ -75,20 +76,25 @@ const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
   const playlistInfoEndPoint = `${endPoint}${fields}`;
   const response = await fetchSpotify(playlistInfoEndPoint, options);
 
-  const playlistData = playlistValidator.parse(response);
+  let playlistData: zodPlaylist;
+  try {
+    playlistData = playlistValidator.parse(response);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      log.error(`${JSON.stringify(err.issues, null, 4)}`);
+    }
+    throw new TRPCError({ code: "PARSE_ERROR" });
+  }
   const tracksData = await fetchTracks(endPoint, options);
-  
-  
-  // TODO: save playlist data and tracks
-  // const playlist = await savePlaylistResponse(playlistData);
 
+  if (!playlistData) return;
+  log.info("Saving playlist...");
   const playlist =
     playlistData.type === "album"
       ? saveAlbumAndTracks(playlistData, tracksData)
       : savePlaylistAndTracks(playlistData, tracksData);
 
-  console.log(playlist)
-  return "playlist";
+  return playlist;
 };
 
 const fetchTracks = async (apiEndpoint: string, options: object) => {

@@ -2,8 +2,8 @@ import { z } from "zod";
 
 const zodImage = z.object({
   url: z.string(),
-  height: z.number(),
-  width: z.number(),
+  height: z.number().nullable(),
+  width: z.number().nullable(),
 });
 
 const zodArtist = z.object({
@@ -33,7 +33,7 @@ const zodTrack = z.object({
 });
 
 const zodPlaylist = z.object({
-  total_tracks: z.number().nullish(),
+  total_tracks: z.number().optional(),
   id: z.string(),
   images: z.array(zodImage),
   name: z.string(),

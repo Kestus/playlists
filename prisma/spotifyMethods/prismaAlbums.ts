@@ -3,6 +3,7 @@ import { prisma } from "~/server/db";
 import { Playlist } from "~/server/models/playlist";
 import { batchSaveTrack } from "./prismaTracks";
 import { mapArtistConnectOrCreate } from "~/utils/prisma";
+import { log } from "next-axiom";
 
 export const saveAlbumAndTracks = async (
   albumData: zodPlaylist,
@@ -11,7 +12,7 @@ export const saveAlbumAndTracks = async (
   const playlist = await saveAlbum(albumData);
   const tracks = await batchSaveTrack(tracksData);
   // connect playlist to tracks
-  playlist.addManyTracks(tracks);
+  playlist.connectOneOrManyTracks(tracks);
 
   return playlist;
 };
@@ -25,10 +26,11 @@ export const saveAlbum = async (albumData: zodPlaylist) => {
     create: {
       spotifyId: albumData.id,
       name: albumData.name,
-      image: albumData.images.at(0)?.url,
+      image: albumData.images[0]?.url,
       Artists: { connectOrCreate: albumArtists },
     },
     update: {},
   });
+  log.info(`Saved new Album: ${albumData.id}`)
   return new Playlist(playlistEntry);
 };

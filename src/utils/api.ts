@@ -60,6 +60,21 @@ export const api = createTRPCNext<AppRouter>({
           },
         }),
       ],
+      /** https://trpc.io/docs/client/nextjs/ssg
+       * Note that the default behaviour of react-query 
+       * is to refetch the data on the client-side when it mounts, 
+       * so if you want to only fetch the data via getStaticProps, 
+       * you need to set refetchOnMount and refetchOnWindowFocus to false 
+       * in the query options.
+       */
+      queryClientConfig: {
+        defaultOptions: {
+          queries: {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+          }
+        }
+      }
     };
   },
   /**

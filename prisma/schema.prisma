@@ -37,10 +37,10 @@ model Artists {
 
   name      String  @db.VarChar(255)
   spotifyId String? @unique @db.VarChar(255)
-  image     String? @db.VarChar(255)
+  image     String  @default("/noImage.png") @db.VarChar(255)
 
-  Tracks    Tracks[]
-  Albums    Albums[]
+  Tracks Tracks[]
+  Albums Albums[]
 
   @@index([id])
   @@index([spotifyId])
@@ -57,11 +57,13 @@ model Playlists {
   updatedAt DateTime     @updatedAt
   type      PlaylistType @default(playlist)
 
-  name      String  @db.VarChar(255)
-  spotifyId String? @unique @db.VarChar(255)
-  image     String? @db.VarChar(255)
+  name           String  @db.VarChar(255)
+  spotifyId      String? @unique @db.VarChar(255)
+  image          String  @default("/noImage.png") @db.VarChar(255)
+  expectedTracks Int     @default(0) @db.SmallInt
+  
 
-  Tracks  Tracks[]
+  Tracks Tracks[]
 
   @@index([id])
   @@index([spotifyId])
@@ -75,7 +77,7 @@ model Albums {
 
   name      String  @db.VarChar(255)
   spotifyId String? @unique @db.VarChar(255)
-  image     String? @db.VarChar(255)
+  image     String  @default("/noImage.png") @db.VarChar(255)
 
   Artists Artists[]
   Tracks  Tracks[]

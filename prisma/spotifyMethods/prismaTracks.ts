@@ -1,55 +1,47 @@
 import { Tracks } from "@prisma/client";
+import { log } from "next-axiom";
 import { zodArtist, zodTrack } from "~/server/api/routers/zod/validators";
 import { prisma } from "~/server/db";
 import { Track } from "~/server/models/track";
 import { mapArtistConnectOrCreate } from "~/utils/prisma";
 
-// TODO:
-// save track
-// if playlisttype is "album"
-//    connect to album
-// if playlisttype is "playlist"
-//    for each track
-//      create album if doesen't exists already
-//      connect to album
-
 export const batchSaveTrack = async (tracksData: zodTrack[]) => {
+  log.info(`Saving [${tracksData.length}] tracks...`);
+
+  // Create new array of Promise<Tracks> (db entries)
+  // save tracks to db and add entry to array
   const arrayOfPromises = new Array<Promise<Tracks>>();
-  for (let track of tracksData) {
+  for (let i = 0; i < tracksData.length; i++) {
+    const track = tracksData[i];
+    if (!track) break;
     arrayOfPromises.push(asyncSaveTrack(track));
   }
 
-  const arrayOfTracks = new Array<Track>();
-  // for (let promise of arrayOfPromises) {
-  //   const trackClass = new Track(await promise)
-  //   arrayOfTracks.push(trackClass)
-  // }
+  const arrayOfTracksData = await Promise.all(arrayOfPromises);
+  const arrayOfTracks = arrayOfTracksData.map((data) => new Track(data)) 
 
-  for (let i = arrayOfPromises.length; i > 0; i--) {
-    const resolvedPromise = await Promise.race(arrayOfPromises);
-    const trackClass = new Track(resolvedPromise);
-    arrayOfTracks.push(trackClass);
-  }
+  log.info(JSON.stringify(arrayOfTracks.map((track) => track.data.name), null, 4));
+
   return arrayOfTracks;
 };
 
-const asyncSaveTrack = async (track: zodTrack) => {
-  const trackArtists = mapArtistConnectOrCreate(track.artists);
-  const albumArtists = mapArtistConnectOrCreate(track.album.artists);
+const asyncSaveTrack = async (trackData: zodTrack) => {
+  const trackArtists = mapArtistConnectOrCreate(trackData.artists);
+  const albumArtists = mapArtistConnectOrCreate(trackData.album.artists);
 
   const trackEntry = prisma.tracks.upsert({
-    where: { spotifyId: track.id },
+    where: { spotifyId: trackData.id },
     create: {
-      name: track.name,
-      spotifyId: track.id,
-      lengthSeconds: Math.floor(track.duration_ms / 1000),
+      name: trackData.name,
+      spotifyId: trackData.id,
+      lengthSeconds: Math.floor(trackData.duration_ms / 1000),
       Album: {
         connectOrCreate: {
-          where: { spotifyId: track.album.id },
+          where: { spotifyId: trackData.album.id },
           create: {
-            name: track.album.name,
-            spotifyId: track.album.id,
-            image: track.album.images[0]?.url,
+            name: trackData.album.name,
+            spotifyId: trackData.album.id,
+            image: trackData.album.images[0]?.url,
             Artists: { connectOrCreate: albumArtists },
           },
         },

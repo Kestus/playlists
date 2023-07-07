@@ -9,6 +9,8 @@ import { Router } from "next/router";
 import Loading from "~/components/placeholders/loading";
 import React from "react";
 
+export { reportWebVitals } from "next-axiom";
+
 const MyApp: AppType = ({ Component, pageProps }) => {
   const [loading, setLoading] = React.useState(false);
 

@@ -1,9 +1,11 @@
-import { Albums, type Playlists } from "@prisma/client";
+import type { Albums, Playlists } from "@prisma/client";
 import { prisma } from "../db";
-import { type zodPlaylist } from "../api/routers/zod/validators";
 import { type dbEntry } from "./interface/dbEntry";
 import { Track } from "./track";
 import { type Artist } from "./artist";
+import type { PrismaClientKnownRequestError } from "@prisma/client/runtime";
+import { logPrismaKnownError } from "~/utils/logging";
+import { log } from "next-axiom";
 
 export class Playlist implements dbEntry {
   data: Playlists | Albums;
@@ -32,7 +34,6 @@ export class Playlist implements dbEntry {
     return this.data.image;
   }
 
-  
   async getTracks() {
     if (this.tracks.length > 0) {
       return this.tracks;
@@ -49,88 +50,49 @@ export class Playlist implements dbEntry {
     return this.tracks;
   }
 
-  addTrack(track: Track) {
-    prisma.playlists.update({
-      where: { id: this.data.id },
-      data: {
-        Tracks: { set: { id: track.data.id } },
-      },
-    }).catch(err => {
-      // TODO:
-      console.log(err)
-    })
-  }
-  removeTrack(track: Track) {
-    prisma.playlists.update({
-      where: { id: this.data.id },
-      data: {
-        Tracks: { delete: { id: track.data.id } },
-      },
-    }).catch(err => {
-      // TODO:
-      console.log(err)
-    })
+  connectOneOrManyTracks(tracks: Track | Track[]) {
+    const isArray = Array.isArray(tracks);
+    const toConnect = isArray
+      ? tracks.map((track) => {
+          return { id: track.data.id };
+        })
+      : [{ id: tracks.data.id }];
+
+    const amount = isArray ? tracks.length : 1;
+    log.info(
+      `Connecting [${amount}] track(s) to playlist [ID: ${this.data.id}]`
+    );
+
+    prisma.playlists
+      .update({
+        where: { id: this.data.id },
+        data: {
+          Tracks: { connect: toConnect },
+        },
+      })
+      .catch((err: PrismaClientKnownRequestError) => logPrismaKnownError(err));
   }
 
-  addManyTracks(arrayOfTracks: Array<Track>) {
-    const arrayOfIds = arrayOfTracks.map((track) => {
-      return { id: track.data.id };
-    });
+  disconnecttOneOrManyTracks(tracks: Track | Track[]) {
+    const isArray = Array.isArray(tracks);
+    const toDisconnect = isArray
+      ? tracks.map((track) => {
+          return { id: track.data.id };
+        })
+      : [{ id: tracks.data.id }];
 
-    prisma.playlists.update({
-      where: { id: this.data.id },
-      data: {
-        Tracks: { set: arrayOfIds },
-      },
-    }).catch(err => {
-      // TODO:
-      console.log(err)
-    })
-  }
-  removeManyTracks(arrayOfTracks: Array<Track>) {
-    const arrayOfIds = arrayOfTracks.map((track) => {
-      return { id: track.data.id };
-    });
+    const amount = isArray ? tracks.length : 1;
+    log.info(
+      `Disconnecting [${amount}] track(s) from playlist [ID: ${this.data.id}]`
+    );
 
-    prisma.playlists.update({
-      where: { id: this.data.id },
-      data: {
-        Tracks: { delete: arrayOfIds },
-      },
-    }).catch(err => {
-      // TODO:
-      console.log(err)
-    })
+    prisma.playlists
+      .update({
+        where: { id: this.data.id },
+        data: {
+          Tracks: { disconnect: toDisconnect },
+        },
+      })
+      .catch((err: PrismaClientKnownRequestError) => logPrismaKnownError(err));
   }
 }
-
-//TODO: save response data to database
-export const savePlaylistResponse = async (res: zodPlaylist) => {
-  // TODO: get all the tracks from playlist
-  // for each track
-  // check db
-  // if exists, add id to list of id's
-  // else...
-  // create dbEntry and add id to list of id's
-  // ^^ same for artists
-
-  const newEntry = await prisma.playlists.upsert({
-    where: { spotifyId: res.id },
-    create: {
-      name: res.name,
-      spotifyId: res.id,
-      type: res.type,
-      image: res.images[0]?.url,
-    },
-    update: {
-      image: res.images[0]?.url,
-      // TODO: update tracks
-    },
-  });
-
-  return new Playlist(newEntry);
-};
-
-export const dbEntryToPlaylist = (dbEntry: Playlists) => {
-  return new Playlist(dbEntry);
-};

@@ -1,6 +1,6 @@
 import { type NextPage } from "next";
 import { useRouter } from "next/router";
-import ErrorPage from "~/components/error";
+import ErrorPage from "~/components/errorPage";
 
 import Navbar from "~/components/navbar";
 import Loading from "~/components/placeholders/loading";

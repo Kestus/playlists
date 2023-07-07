@@ -7,7 +7,7 @@ export const mapArtistConnectOrCreate = (artists: zodArtist[]) => {
       create: {
         name: artist.name,
         spotifyId: artist.id,
-        image: artist.images?.at(0)?.url,
+        image: artist.images?.[0]?.url,
       },
     };
   }); 
