@@ -12,14 +12,11 @@ const Navbar = () => {
   return (
     <>
       <header className="sticky top-0 flex h-12 flex-row items-center gap-4 bg-green-200 px-2">
-        <Link href={`/`} className="text-slate-800">
-          Tracks
+        <Link href={`/latest`} className="text-slate-800">
+          Latest
         </Link>
-        <Link href={`/`} className="text-slate-800">
-          Artists
-        </Link>
-        <Link href={`/`} className="text-slate-800">
-          Playlists
+        <Link href={`/test`} className="text-slate-800">
+          Test
         </Link>
         <div className="ml-auto flex">
           {!user.isSignedIn && <SignInButton />}

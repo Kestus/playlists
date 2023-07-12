@@ -14,14 +14,14 @@ export const playlistsRouter = createTRPCRouter({
         .optional()
     )
     .query(async ({ input }) => {
-      const offset = input?.offset ? input.offset : 0;
-      const limit = input?.limit ? input.limit : 30;
-      const playlists = await getLatestPlaylists(offset, limit);
-      return playlists;
+      return await getLatestPlaylists(input?.offset, input?.limit);
     }),
 });
 
-const getLatestPlaylists = async (offset: number, limit: number) => {
+export const getLatestPlaylists = async (offset?: number, limit?: number) => {
+  offset = offset ? offset : 0;
+  limit = limit ? limit : 30;
+
   const entries = await prisma.playlists.findMany({
     orderBy: {
       createdAt: "desc",
@@ -40,5 +40,7 @@ const getLatestPlaylists = async (offset: number, limit: number) => {
       message: "No playlists found",
     });
   }
+
   return entries;
 };
+

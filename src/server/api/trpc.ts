@@ -29,20 +29,20 @@ import { prisma } from "~/server/db";
  * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
 
-export const createInnerTRPCContext = (
-  opts?: CreateNextContextOptions
-) => {
-  if (!opts) return { prisma };
+// export const createInnerTRPCContext = (
+//   opts?: CreateNextContextOptions
+// ) => {
+//   if (!opts) return { prisma };
 
-  const { req, res } = opts;
-  const { user } = getAuth(req);
-  return {
-    prisma,
-    session: user,
-    req,
-    res,
-  };
-};
+//   const { req, res } = opts;
+//   const { user } = getAuth(req);
+//   return {
+//     prisma,
+//     session: user,
+//     req,
+//     res,
+//   };
+// };
 
 /**
  * This is the actual context you will use in your router. It will be used to process every request
@@ -51,8 +51,16 @@ export const createInnerTRPCContext = (
  * @see https://trpc.io/docs/context
  */
 
-export const createTRPCContext = (opts: CreateNextContextOptions) => {
-  return createInnerTRPCContext(opts);
+export const createTRPCContext = (opts?: CreateNextContextOptions) => {
+  // return createInnerTRPCContext(opts);
+
+  const user = opts ? getAuth(opts.req).user : null
+   return {
+    prisma,
+    session: user,
+    req: opts?.req,
+    res: opts?.res,
+  };
 };
 
 /**
