@@ -29,6 +29,10 @@ const config = withAxiom({
         protocol: "https",
         hostname: "i.scdn.co",
       },
+      {
+        protocol: "https",
+        hostname: "images-ak.spotifycdn.com",
+      },
     ],
   },
 });

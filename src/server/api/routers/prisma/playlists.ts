@@ -43,4 +43,3 @@ export const getLatestPlaylists = async (offset?: number, limit?: number) => {
 
   return entries;
 };
-

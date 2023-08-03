@@ -1,5 +1,9 @@
 import type { Playlists, Tracks } from "@prisma/client";
-import type { GetStaticPropsContext, InferGetStaticPropsType, NextPage } from "next";
+import type {
+  GetStaticPropsContext,
+  InferGetStaticPropsType,
+  NextPage,
+} from "next";
 import Head from "next/head";
 import Navbar from "~/components/navbar";
 import { prisma } from "~/server/db";

@@ -2,9 +2,8 @@ import type { Playlists } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
-// TODO: rename "expectedTracks" to "expectedLength"
 
-const PlaylistItemContainer = (params: { data: Playlists; count: number }) => {
+const PlaylistItemContainer = (params: { data: Playlists; count?: number }) => {
   const data = params.data;
   const count = params.count;
   return (
@@ -13,7 +12,7 @@ const PlaylistItemContainer = (params: { data: Playlists; count: number }) => {
       <div className="flex flex-col">
         <Link href={`playlist/${data.id}`}>{data.name}</Link>
         <span>Expected length: {data.expectedTracks}</span>
-        <span>Actual length: {count}</span>
+        {count && <span>Actual length: {count}</span>}
       </div>
     </div>
   );

@@ -17,34 +17,10 @@ import { log } from "next-axiom";
 
 const COOKIE_KEY = "spotify_access_token";
 
-// TODO:
-// getPlaylist
-// check database by playlist id
-// if exists
-//    return class
-// else...
-// fetch playlist (100 tracks limit)
-//  fetch additional tracks if needed
-// save result to database
-// create class
-// return class
-
 export const spotifyRouter = createTRPCRouter({
-  fetchPlaylist: publicProcedure
-    .input(
-      z.object({
-        url: z.string(),
-        spotifyAccessToken: z.string(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      return await fetchPlaylist(input.url, input.spotifyAccessToken);
-    }),
-
   getAccessToken: publicProcedure.query(async ({ ctx }) => {
     const browserCookie = ctx.req.cookies[COOKIE_KEY];
     if (browserCookie) return browserCookie;
-
     const newToken = await fetchAccessToken();
     ctx.res.setHeader(
       "Set-Cookie",
@@ -57,78 +33,45 @@ export const spotifyRouter = createTRPCRouter({
     );
     return newToken;
   }),
+  // -----------
+  fetchPlaylist: publicProcedure
+    .input(
+      z.object({
+        url: z.string(),
+        spotifyAccessToken: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const url = new URL(input.url);
+        return fetchPlaylist(url, input.spotifyAccessToken);
+      } catch (e) {        
+        log.error(`URL construct error`)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Bad URL" });
+      }
+    }),
+  // -----------
+  fetchPlaylistPreview: publicProcedure
+    .input(
+      z.object({
+        url: z.string(),
+        spotifyAccessToken: z.string(),
+      })
+    )
+    .mutation(({ input }) => {
+      try {
+        const url = new URL(input.url);
+        return fetchPlaylistData(url, input.spotifyAccessToken);
+      } catch (e) {
+        log.error(`URL construct error`)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Bad URL" });
+      }
+    }),
 });
 export type SpotifyRouter = typeof spotifyRouter;
 
-const fetchPlaylist = async (url: string, spotifyAccessToken: string) => {
-  const { type, playlistId } = splitUrl(url);
-  log.info(`Fetching playlist ${playlistId}...`);
-
-  const endPoint = `https://api.spotify.com/v1/${type}s/${playlistId}`;
-  const options = {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${spotifyAccessToken}`,
-    },
-  };
-
-  const fields = `?fields=total_tracks,release_date,type,genres,artists,id,images,name,tracks%28total%29`;
-  const playlistInfoEndPoint = `${endPoint}${fields}`;
-  const response = await fetchSpotify(playlistInfoEndPoint, options);
-
-  let playlistData: zodPlaylist;
-  try {
-    playlistData = playlistValidator.parse(response);
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      log.error(`${JSON.stringify(err.issues, null, 4)}`);
-    }
-    throw new TRPCError({ code: "PARSE_ERROR" });
-  }
-  const tracksData = await fetchTracks(endPoint, options);
-
-  if (!playlistData) return;
-  log.info("Saving playlist...");
-  const playlist =
-    playlistData.type === "album"
-      ? saveAlbumAndTracks(playlistData, tracksData)
-      : savePlaylistAndTracks(playlistData, tracksData);
-
-  return playlist;
-};
-
-const fetchTracks = async (apiEndpoint: string, options: object) => {
-  let nextTracksEndpoint:
-    | string
-    | undefined
-    | null = `${apiEndpoint}/tracks?offset=0&limit=100`;
-
-  const arrayOfTracks = new Array<zodTrack>();
-  while (typeof nextTracksEndpoint === "string") {
-    const response = await fetchSpotify(nextTracksEndpoint, options);
-    const parsedRes = playlistItemsValidator.parse(response);
-
-    nextTracksEndpoint = parsedRes.next;
-    const newTracks = parseAndFilterTracks(parsedRes.items);
-
-    arrayOfTracks.push(...newTracks);
-  }
-
-  return arrayOfTracks;
-};
-
-const parseAndFilterTracks = (items: zodArrayOfItems) => {
-  const arrayOfTracks = new Array<zodTrack>();
-  for (let i = 0; i < items.length; i++) {
-    const track = trackValidator.safeParse(items[i]?.track);
-    if (track.success) {
-      arrayOfTracks.push(track.data);
-    }
-  }
-  return arrayOfTracks;
-};
-
-const fetchAccessToken = () => {
+// Access token required to make spotify API request
+export const fetchAccessToken = () => {
   const API_KEY = process.env.API_KEY_SPOTIFY;
   const API_SECRET = process.env.API_SECRET_SPOTIFY;
   if (!API_KEY || !API_SECRET) {
@@ -167,6 +110,108 @@ const fetchAccessToken = () => {
   return res;
 };
 
+// create spotift API endpoint
+const getEndpoint = (url: URL) => {
+  if (!spotifyURLIsValid(url)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid URL" });
+  }
+
+  const path = url.pathname.split("/");
+  const type = path[1] as string;
+  const playlistId = path[2] as string;
+  return `https://api.spotify.com/v1/${type}s/${playlistId}`;
+};
+
+// fetch playlist data and tracks
+// save evetything to db
+const fetchPlaylist = async (url: URL, spotifyAccessToken: string) => {
+  const endPoint = getEndpoint(url);
+  log.info(`Fetching playlist ${endPoint}...`);
+
+  const playlistData = await fetchPlaylistData(url, spotifyAccessToken);
+  const tracksData = await fetchTracks(url, spotifyAccessToken);
+
+  if (!playlistData) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  log.info("Saving playlist...");
+  const playlist =
+    playlistData.type === "album"
+      ? saveAlbumAndTracks(playlistData, tracksData)
+      : savePlaylistAndTracks(playlistData, tracksData);
+
+  return playlist;
+};
+
+// fetch playlist data from spotify
+export const fetchPlaylistData = async (
+  url: URL,
+  spotifyAccessToken: string
+) => {
+  const endPoint = getEndpoint(url);
+  const options = {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${spotifyAccessToken}`,
+    },
+  };
+  const fields = `?fields=total_tracks,release_date,type,genres,artists,id,images,name,tracks%28total%29`;
+  const playlistInfoEndPoint = `${endPoint}${fields}`;
+
+  const response = await fetchSpotify(playlistInfoEndPoint, options);
+
+  let playlistData: zodPlaylist;
+  try {
+    playlistData = playlistValidator.parse(response);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      log.error(`${JSON.stringify(err.issues, null, 4)}`);
+    }
+    throw new TRPCError({ code: "PARSE_ERROR" });
+  }
+  return playlistData;
+};
+
+// fetch only tracks from playlist
+const fetchTracks = async (url: URL, spotifyAccessToken: string) => {
+  const endPoint = getEndpoint(url);
+  const options = {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${spotifyAccessToken}`,
+    },
+  };
+
+  let nextTracksEndpoint:
+    | string
+    | undefined
+    | null = `${endPoint}/tracks?offset=0&limit=100`;
+
+  const arrayOfTracks = new Array<zodTrack>();
+  while (typeof nextTracksEndpoint === "string") {
+    const response = await fetchSpotify(nextTracksEndpoint, options);
+    const parsedRes = playlistItemsValidator.parse(response);
+
+    nextTracksEndpoint = parsedRes.next;
+    const newTracks = parseAndFilterTracks(parsedRes.items);
+
+    arrayOfTracks.push(...newTracks);
+  }
+
+  return arrayOfTracks;
+};
+
+
+const parseAndFilterTracks = (items: zodArrayOfItems) => {
+  const arrayOfTracks = new Array<zodTrack>();
+  for (let i = 0; i < items.length; i++) {
+    const track = trackValidator.safeParse(items[i]?.track);
+    if (track.success) {
+      arrayOfTracks.push(track.data);
+    }
+  }
+  return arrayOfTracks;
+};
+
+
 const fetchSpotify = async (apiEndpoint: string, options: object) => {
   options;
   const res = await fetch(apiEndpoint, options).then((response) => {
@@ -182,18 +227,20 @@ const fetchSpotify = async (apiEndpoint: string, options: object) => {
   return res;
 };
 
-const splitUrl = (url: string) => {
-  const splitUrl = url.split("/");
-  const length = splitUrl.length;
-  const indexOfId = length - 1;
-  const indexOfType = length - 2;
-  const type = splitUrl[indexOfType];
-  const playlistId = splitUrl[indexOfId];
-  if (!type || !playlistId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Wrong URL",
-    });
+
+// check spotify url
+// example: https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
+export const spotifyURLIsValid = (url: URL) => {
+  if (!url.hostname.includes("spotify.com")) {
+    return false;
   }
-  return { type, playlistId };
+  const path = url.pathname.split("/");
+  if (path.length < 2 || !urlPathIsValid(path)) {
+    return false;
+  }
+  return true;
+};
+
+const urlPathIsValid = (path: Array<string>) => {
+  return path.includes("playlist") || path.includes("album");
 };

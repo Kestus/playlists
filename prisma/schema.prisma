@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 datasource db {
-  provider     = "mysql"
+  provider     = "cockroachdb"
   url          = env("DATABASE_URL")
   relationMode = "prisma"
 }
@@ -16,15 +16,15 @@ model Tracks {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name          String  @db.VarChar(255)
-  lengthSeconds Int     @db.SmallInt
-  spotifyId     String? @unique @db.VarChar(255)
+  name          String  @db.String(255)
+  lengthSeconds Int     @db.Int2
+  spotifyId     String? @unique @db.String(255)
 
   Artists    Artists[]
   Playlists  Playlists[]
   Album      Albums      @relation(fields: [albumId, albumImage], references: [id, image])
-  albumId    String
-  albumImage String
+  albumId    String      @db.String(255)
+  albumImage String      @db.String(410)
 
   @@index([id, spotifyId])
   @@index([albumId, albumImage])
@@ -35,9 +35,9 @@ model Artists {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name      String  @db.VarChar(255)
-  spotifyId String? @unique @db.VarChar(255)
-  image     String  @default("/noImage.png") @db.VarChar(255)
+  name      String  @db.String(255)
+  spotifyId String? @unique @db.String(255)
+  image     String  @default("/noImage.png") @db.String(255)
 
   Tracks Tracks[]
   Albums Albums[]
@@ -57,11 +57,10 @@ model Playlists {
   updatedAt DateTime     @updatedAt
   type      PlaylistType @default(playlist)
 
-  name           String  @db.VarChar(255)
-  spotifyId      String? @unique @db.VarChar(255)
-  image          String  @default("/noImage.png") @db.VarChar(255)
-  expectedTracks Int     @default(0) @db.SmallInt
-  
+  name           String  @db.String(255)
+  spotifyId      String? @unique @db.String(255)
+  image          String  @default("/noImage.png") @db.String(255)
+  expectedLength Int     @default(0) @db.Int2
 
   Tracks Tracks[]
 
@@ -75,9 +74,9 @@ model Albums {
   updatedAt DateTime     @updatedAt
   type      PlaylistType @default(album)
 
-  name      String  @db.VarChar(255)
-  spotifyId String? @unique @db.VarChar(255)
-  image     String  @default("/noImage.png") @db.VarChar(255)
+  name      String  @db.String(255)
+  spotifyId String? @unique @db.String(255)
+  image     String  @default("/noImage.png") @db.String(255)
 
   Artists Artists[]
   Tracks  Tracks[]
