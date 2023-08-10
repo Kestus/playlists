@@ -1,7 +1,7 @@
 import type {
   PrismaClientKnownRequestError,
   PrismaClientUnknownRequestError,
-} from "@prisma/client/runtime";
+} from "@prisma/client/runtime/library";
 import { log } from "next-axiom";
 
 export const logPrismaKnownError = (err: PrismaClientKnownRequestError) => {

@@ -3,9 +3,9 @@ import { prisma } from "../db";
 import { type dbEntry } from "./interface/dbEntry";
 import { Track } from "./track";
 import { type Artist } from "./artist";
-import type { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { logPrismaKnownError } from "~/utils/logging";
 import { log } from "next-axiom";
+import type { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 export class Playlist implements dbEntry {
   data: Playlists | Albums;
