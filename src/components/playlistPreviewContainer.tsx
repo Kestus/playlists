@@ -11,7 +11,7 @@ const PlaylistItemContainer = (params: { data: Playlists; count?: number }) => {
       <Image src={data.image} width={96} height={96} alt="Album picture" />
       <div className="flex flex-col">
         <Link href={`playlist/${data.id}`}>{data.name}</Link>
-        <span>Expected length: {data.expectedTracks}</span>
+        <span>Expected length: {data.expectedLength}</span>
         {count && <span>Actual length: {count}</span>}
       </div>
     </div>
