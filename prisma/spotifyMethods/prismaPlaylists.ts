@@ -23,7 +23,7 @@ const savePlaylist = async (playlistData: zodPlaylist) => {
       spotifyId: playlistData.id,
       name: playlistData.name,
       image: playlistData.images[0]?.url,
-      expectedTracks: playlistData.total_tracks?.valueOf(),
+      expectedLength: playlistData.total_tracks?.valueOf(),
     },
     update: {},
   });
