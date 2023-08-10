@@ -1,90 +1,52 @@
 import { api } from "~/utils/api";
 import Spinner from "./spinner";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { Transition } from "@headlessui/react";
+
 
 // https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
 
 const NewPlaylistForm = () => {
+  const [inputValue, setInputValue] = useState("");
+  const { urlIsValid, reset: resetUrlIsValid } = useCheckUrl(inputValue);
   const {
-    mutate: checkUrl,
-    data: urlIsValid,
-    isSuccess: checkUrlSuccess,
-  } = api.forms.spotifyUrlHandler.useMutation();
-  const {
-    mutate: fetchPlaylistPreview,
-    data: playlist,
+    playlist,
     isLoading: loadingPlaylistPreview,
     reset: resetPlaylistPreview,
-  } = api.spotify.fetchPlaylistPreview.useMutation();
-  const { data: spotifyAccessToken, isSuccess: tokenIsLoaded } =
-    api.spotify.getAccessToken.useQuery();
+    fetchPlaylistPreview
+  } = useFetchPlaylistPreview(inputValue, urlIsValid);
+  useEffect(fetchPlaylistPreview, [urlIsValid, fetchPlaylistPreview])
 
-  const [inputIsDisabled, setInputIsDisabled] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-
-  // select element form input field
-  const inputFieldRef = useRef<HTMLInputElement>(null);
-  const inputField = inputFieldRef.current;
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const element = event.target;
-    setInputValue(element.value);
-  };
-
-  // TODO
-  // 46:6  Warning: React Hook useEffect has missing dependencies: 'checkUrl', 'inputField?.classList', and 'resetPlaylistPreview'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
-  // 56:6  Warning: React Hook useEffect has missing dependencies: 'fetchPlaylistPreview', 'inputField?.classList', 'inputValue', 'spotifyAccessToken', 'tokenIsLoaded', and 'urlIsValid'. Either
-  // include them or remove the dependency array.  react-hooks/exhaustive-deps
-  
-  // check url
-  useEffect(() => {
-    if (inputValue.length < 10) return;
-    const timeOut = setTimeout(() => {
-      inputField?.classList.remove("border-red-500");
-      resetPlaylistPreview();
-      checkUrl({ url: inputValue });
-    }, 1000);
-    return () => {
-      clearTimeout(timeOut);
-    };
-  }, [inputValue]);
-
-  // paint the border red if url is is not valid
-  useEffect(() => {
-    if (typeof urlIsValid !== "boolean") return;
-    if (!urlIsValid) {
-      inputField?.classList.add("border-red-500");
-    } else if (tokenIsLoaded) {
-      fetchPlaylistPreview({ url: inputValue, spotifyAccessToken });
-    }
-  }, [checkUrlSuccess]);
-
-  // disable input while playlist preview is loading
-  useEffect(() => {
-    if (loadingPlaylistPreview) {
-      setInputIsDisabled(true);
-    } else {
-      setInputIsDisabled(false);
-    }
-  }, [loadingPlaylistPreview]);
+  // check input url
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+    resetUrlIsValid();
+    resetPlaylistPreview();
+  };  
 
   return (
     <div className="flex w-1/3 flex-col  ">
       <form className="w-full">
         <input
-          onChange={handleChange}
-          className="w-full border-2 transition-colors duration-500 ease-in-out"
+          onChange={handleInputChange}
+          className={`
+          w-full border-2 transition-colors duration-500 ease-in-out 
+          ${
+            typeof urlIsValid === "boolean"
+              ? urlIsValid
+                ? "border-green-500"
+                : "border-red-500"
+              : ""
+          }
+          `}
           id="playlist"
           type="text"
-          placeholder="Playlist URL"
-          disabled={inputIsDisabled}
+          placeholder="https://open.spotify.com/playlist/id"
+          disabled={loadingPlaylistPreview}
           value={inputValue}
-          ref={inputFieldRef}
         />
       </form>
       {loadingPlaylistPreview && <Spinner />}
-      {/* {playlist && <PlaylistItemContainer data={playlist} />} */}
       <Transition
         show={!!playlist}
         enter="transition-opacity duration-500"
@@ -101,3 +63,43 @@ const NewPlaylistForm = () => {
 };
 
 export default NewPlaylistForm;
+
+const useCheckUrl = (inputValue: string) => {
+  const {
+    mutate: checkUrl,
+    data: urlIsValid,
+    reset: resetUrlIsValid,
+  } = api.forms.spotifyUrlHandler.useMutation();
+
+  // checkUrl after timeout, when unput value changes
+  useEffect(() => {
+    const timeOut = setTimeout(() => {
+      if (inputValue.length < 10) return;
+      checkUrl({ url: inputValue });
+    }, 3000);
+    return () => {
+      clearTimeout(timeOut);
+    };
+  }, [inputValue, checkUrl]);
+
+  return { urlIsValid, reset: resetUrlIsValid };
+};
+
+
+const useFetchPlaylistPreview = (
+  url: string,
+  urlIsValid: boolean | undefined
+) => {
+  const { data: spotifyAccessToken, isSuccess: tokenIsLoaded } =
+    api.spotify.getAccessToken.useQuery();
+
+  const { mutate, data: playlist, isLoading, reset } =
+    api.spotify.fetchPlaylistPreview.useMutation();
+
+  const fetchPlaylistPreview = () => {
+    if (tokenIsLoaded && urlIsValid) {
+      mutate({url, spotifyAccessToken})
+    }
+  }
+  return { playlist, isLoading, reset, fetchPlaylistPreview };
+};
