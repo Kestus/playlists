@@ -1,8 +1,7 @@
 import { api } from "~/utils/api";
 import Spinner from "./spinner";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState, useCallback } from "react";
 import { Transition } from "@headlessui/react";
-
 
 // https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
 
@@ -13,16 +12,17 @@ const NewPlaylistForm = () => {
     playlist,
     isLoading: loadingPlaylistPreview,
     reset: resetPlaylistPreview,
-    fetchPlaylistPreview
+    fetchPlaylistPreview,
   } = useFetchPlaylistPreview(inputValue, urlIsValid);
-  useEffect(fetchPlaylistPreview, [urlIsValid, fetchPlaylistPreview])
+
+  useEffect(fetchPlaylistPreview, [urlIsValid, fetchPlaylistPreview]);
 
   // check input url
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
     resetUrlIsValid();
     resetPlaylistPreview();
-  };  
+  };
 
   return (
     <div className="flex w-1/3 flex-col  ">
@@ -85,7 +85,6 @@ const useCheckUrl = (inputValue: string) => {
   return { urlIsValid, reset: resetUrlIsValid };
 };
 
-
 const useFetchPlaylistPreview = (
   url: string,
   urlIsValid: boolean | undefined
@@ -93,13 +92,18 @@ const useFetchPlaylistPreview = (
   const { data: spotifyAccessToken, isSuccess: tokenIsLoaded } =
     api.spotify.getAccessToken.useQuery();
 
-  const { mutate, data: playlist, isLoading, reset } =
-    api.spotify.fetchPlaylistPreview.useMutation();
+  const {
+    mutate,
+    data: playlist,
+    isLoading,
+    reset,
+  } = api.spotify.fetchPlaylistPreview.useMutation();
 
-  const fetchPlaylistPreview = () => {
+  const fetchPlaylistPreview = useCallback(() => {
     if (tokenIsLoaded && urlIsValid) {
-      mutate({url, spotifyAccessToken})
+      mutate({ url, spotifyAccessToken });
     }
-  }
+  }, [tokenIsLoaded, urlIsValid, url, spotifyAccessToken, mutate]);
+
   return { playlist, isLoading, reset, fetchPlaylistPreview };
 };
