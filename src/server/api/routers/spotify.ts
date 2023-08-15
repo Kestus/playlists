@@ -11,6 +11,7 @@ import type { zodPlaylist, zodArrayOfItems, zodTrack } from "./zod/validators";
 import { savePlaylistAndTracks } from "prisma/spotifyMethods/prismaPlaylists";
 import { saveAlbumAndTracks } from "prisma/spotifyMethods/prismaAlbums";
 import { log } from "next-axiom";
+import { prisma } from "~/server/db";
 
 // import { promises as fs } from "fs";
 // fs.writeFile("dataArray_.json", JSON.stringify(arrayOfTracks, null, 4))
@@ -33,8 +34,9 @@ export const spotifyRouter = createTRPCRouter({
     );
     return newToken;
   }),
+
   // -----------
-  fetchPlaylist: publicProcedure
+  savePlaylist: publicProcedure
     .input(
       z.object({
         url: z.string(),
@@ -44,12 +46,13 @@ export const spotifyRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       try {
         const url = new URL(input.url);
-        return fetchPlaylist(url, input.spotifyAccessToken);
-      } catch (e) {        
-        log.error(`URL construct error`)
+        return savePlaylist(url, input.spotifyAccessToken);
+      } catch (e) {
+        log.error(`URL construct error`);
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bad URL" });
       }
     }),
+
   // -----------
   fetchPlaylistPreview: publicProcedure
     .input(
@@ -63,10 +66,12 @@ export const spotifyRouter = createTRPCRouter({
         const url = new URL(input.url);
         return fetchPlaylistData(url, input.spotifyAccessToken);
       } catch (e) {
-        log.error(`URL construct error`)
+        log.error(`URL construct error`);
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bad URL" });
       }
     }),
+
+  // -----------
 });
 export type SpotifyRouter = typeof spotifyRouter;
 
@@ -75,11 +80,13 @@ export const fetchAccessToken = () => {
   const API_KEY = process.env.API_KEY_SPOTIFY;
   const API_SECRET = process.env.API_SECRET_SPOTIFY;
   if (!API_KEY || !API_SECRET) {
+    log.error("[spotify][fetchAccessToken] Missing enviroment variables!");
     throw new TRPCError({
       code: "UNAUTHORIZED",
     });
   }
 
+  // construct request options
   const options = {
     method: "POST",
     headers: {
@@ -88,6 +95,7 @@ export const fetchAccessToken = () => {
     body: `grant_type=client_credentials&client_id=${API_KEY}&client_secret=${API_SECRET}`,
   };
 
+  // Make request
   const res = fetch("https://accounts.spotify.com/api/token", options)
     .then((response) => {
       if (!response.ok) {
@@ -110,35 +118,33 @@ export const fetchAccessToken = () => {
   return res;
 };
 
-// create spotift API endpoint
-const getEndpoint = (url: URL) => {
-  if (!spotifyURLIsValid(url)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid URL" });
-  }
+// fetch and save playlist
+const savePlaylist = async (url: URL, spotifyAccessToken: string) => {
+  const { playlistData, tracksData } = await fetchPlaylistAndTracksData(
+    url,
+    spotifyAccessToken
+  );
 
-  const path = url.pathname.split("/");
-  const type = path[1] as string;
-  const playlistId = path[2] as string;
-  return `https://api.spotify.com/v1/${type}s/${playlistId}`;
+  log.info("Saving playlist...");
+  const playlist = playlistData.type === "album"
+    ? await saveAlbumAndTracks(playlistData, tracksData)
+    : await savePlaylistAndTracks(playlistData, tracksData);
+  return playlist.getId()
 };
 
 // fetch playlist data and tracks
-// save evetything to db
-const fetchPlaylist = async (url: URL, spotifyAccessToken: string) => {
+const fetchPlaylistAndTracksData = async (
+  url: URL,
+  spotifyAccessToken: string
+) => {
   const endPoint = getEndpoint(url);
+
   log.info(`Fetching playlist ${endPoint}...`);
-
-  const playlistData = await fetchPlaylistData(url, spotifyAccessToken);
-  const tracksData = await fetchTracks(url, spotifyAccessToken);
-
+  const { playlistData } = await fetchPlaylistData(url, spotifyAccessToken);
+  const tracksData = await fetchTracksData(url, spotifyAccessToken);
   if (!playlistData) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-  log.info("Saving playlist...");
-  const playlist =
-    playlistData.type === "album"
-      ? saveAlbumAndTracks(playlistData, tracksData)
-      : savePlaylistAndTracks(playlistData, tracksData);
 
-  return playlist;
+  return { playlistData, tracksData };
 };
 
 // fetch playlist data from spotify
@@ -167,11 +173,15 @@ export const fetchPlaylistData = async (
     }
     throw new TRPCError({ code: "PARSE_ERROR" });
   }
-  return playlistData;
+
+  // check Playlist existence in DataBase
+  const alreadyExists = await checkPlaylistAlreadySaved(playlistData.id);
+
+  return { playlistData, alreadyExists };
 };
 
 // fetch only tracks from playlist
-const fetchTracks = async (url: URL, spotifyAccessToken: string) => {
+const fetchTracksData = async (url: URL, spotifyAccessToken: string) => {
   const endPoint = getEndpoint(url);
   const options = {
     method: "GET",
@@ -199,7 +209,6 @@ const fetchTracks = async (url: URL, spotifyAccessToken: string) => {
   return arrayOfTracks;
 };
 
-
 const parseAndFilterTracks = (items: zodArrayOfItems) => {
   const arrayOfTracks = new Array<zodTrack>();
   for (let i = 0; i < items.length; i++) {
@@ -210,7 +219,6 @@ const parseAndFilterTracks = (items: zodArrayOfItems) => {
   }
   return arrayOfTracks;
 };
-
 
 const fetchSpotify = async (apiEndpoint: string, options: object) => {
   options;
@@ -227,6 +235,17 @@ const fetchSpotify = async (apiEndpoint: string, options: object) => {
   return res;
 };
 
+// create spotift API endpoint
+const getEndpoint = (url: URL) => {
+  if (!spotifyURLIsValid(url)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid URL" });
+  }
+
+  const path = url.pathname.split("/");
+  const type = path[1] as string;
+  const playlistId = path[2] as string;
+  return `https://api.spotify.com/v1/${type}s/${playlistId}`;
+};
 
 // check spotify url
 // example: https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
@@ -243,4 +262,11 @@ export const spotifyURLIsValid = (url: URL) => {
 
 const urlPathIsValid = (path: Array<string>) => {
   return path.includes("playlist") || path.includes("album");
+};
+
+const checkPlaylistAlreadySaved = async (spotifyId: string) => {
+  const entry = await prisma.playlists.findFirst({
+    where: { spotifyId: spotifyId },
+  });
+  return entry?.id
 };

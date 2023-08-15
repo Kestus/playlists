@@ -16,6 +16,23 @@ export const playlistsRouter = createTRPCRouter({
     .query(async ({ input }) => {
       return await getLatestPlaylists(input?.offset, input?.limit);
     }),
+
+  getBySpotifyId: publicProcedure
+    .input(z.object({ spotifyId: z.string() }))
+    .query(({ input }) => {
+      return prisma.playlists.findUniqueOrThrow({
+        where: { spotifyId: input.spotifyId },
+      });
+    }),
+
+  checkPlaylistExistsBySpotifyId: publicProcedure
+    .input(z.object({ spotifyId: z.string() }))
+    .mutation(async ({ input }) => {
+      const entry = await prisma.playlists.findFirst({
+        where: { spotifyId: input.spotifyId },
+      });
+      return entry ? true : false
+    }),
 });
 
 export const getLatestPlaylists = async (offset?: number, limit?: number) => {

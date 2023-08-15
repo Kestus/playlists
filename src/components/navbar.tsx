@@ -15,8 +15,8 @@ const Navbar = () => {
         <Link href={`/latest`} className="text-slate-800">
           Latest
         </Link>
-        <Link href={`/test`} className="text-slate-800">
-          Test
+        <Link href={`/new`} className="text-slate-800">
+          Add new playlist
         </Link>
         <div className="ml-auto flex">
           {!user.isSignedIn && <SignInButton />}

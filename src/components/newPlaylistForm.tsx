@@ -2,18 +2,31 @@ import { api } from "~/utils/api";
 import Spinner from "./spinner";
 import { type ChangeEvent, useEffect, useState, useCallback } from "react";
 import { Transition } from "@headlessui/react";
+import Image from "next/image";
+import Link from "next/link";
 
 // https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
 
 const NewPlaylistForm = () => {
   const [inputValue, setInputValue] = useState("");
   const { urlIsValid, reset: resetUrlIsValid } = useCheckUrl(inputValue);
+  // fetch spotify access token
+  const { data: spotifyAccessToken } = api.spotify.getAccessToken.useQuery();
+  // Playlist preview hook
   const {
     playlist,
+    alreadyExists,
     isLoading: loadingPlaylistPreview,
     reset: resetPlaylistPreview,
     fetchPlaylistPreview,
-  } = useFetchPlaylistPreview(inputValue, urlIsValid);
+    isError: playlistNotFound,
+  } = useFetchPlaylistPreview(inputValue, urlIsValid, spotifyAccessToken);
+  // Save playlist hook
+  const { savePlaylist, savingPlaylist, isSaved } = useSavePlaylist(
+    inputValue,
+    urlIsValid,
+    spotifyAccessToken
+  );
 
   useEffect(fetchPlaylistPreview, [urlIsValid, fetchPlaylistPreview]);
 
@@ -25,17 +38,17 @@ const NewPlaylistForm = () => {
   };
 
   return (
-    <div className="flex w-1/3 flex-col  ">
-      <form className="w-full">
+    <div className="flex w-2/3 flex-col md:w-96">
+      <form>
         <input
           onChange={handleInputChange}
           className={`
           w-full border-2 transition-colors duration-500 ease-in-out 
           ${
             typeof urlIsValid === "boolean"
-              ? urlIsValid
+              ? urlIsValid && !playlistNotFound
                 ? "border-green-500"
-                : "border-red-500"
+                : "border-red-500 text-red-500"
               : ""
           }
           `}
@@ -48,7 +61,7 @@ const NewPlaylistForm = () => {
       </form>
       {loadingPlaylistPreview && <Spinner />}
       <Transition
-        show={!!playlist}
+        show={!!playlist || !!playlistNotFound}
         enter="transition-opacity duration-500"
         enterFrom="opacity-0"
         enterTo="opacity-100"
@@ -56,15 +69,93 @@ const NewPlaylistForm = () => {
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
       >
-        {playlist && <span>{playlist.name}</span>}
+        {playlist && (
+          <div className=" mt-2 flex gap-2 rounded-md border-2 border-green-400 bg-green-200 p-2">
+            {playlist.images[0] && (
+              <Image
+                src={playlist.images[0]?.url}
+                width={120}
+                height={120}
+                alt="Playlist Image"
+              />
+            )}
+            <div className="flex flex-col w-full">
+              <span className="">{playlist.name}</span>
+              <div className="mt-auto flex gap-4">
+                <div className="ml-auto text-sm">
+                  {!!alreadyExists && !isSaved && (
+                    <>
+                      <span>Already Exists</span>
+                      <br />
+                      <Link href={`/playlist/${alreadyExists}`}>
+                        Go to Playlist
+                      </Link>
+                    </>
+                  )}
+                  {typeof isSaved === "string" && (
+                    <>
+                      <span>Saved</span>
+                      <br />
+                      <Link href={`/playlist/${isSaved}`}>Go to Playlist</Link>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={savePlaylist}
+                  className={`
+                      rounded
+                      border-b-2
+                      px-2
+                      font-sans
+                      font-semibold
+                      text-slate-50
+                      transition-colors
+                      duration-500
+                      ease-out
+                      ${
+                        !!savingPlaylist
+                          ? `border-grey-800 
+                          bg-grey-600
+                          hover:bg-grey-500
+                          cursor-wait
+                        `
+                          : `border-cyan-800 
+                          bg-cyan-600
+                          hover:bg-cyan-500
+                          `
+                      }
+                    `}
+                >
+                  {!alreadyExists ? "Save" : "Update"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <Transition.Child
+          enter="transition duration-100 ease-in"
+          enterFrom="-translate-y-10 opacity-0"
+          enterTo="translate-y-0 opacity-100"
+          leave="transition duration-75 ease-out"
+          leaveFrom="translate-y-0 opacity-100"
+          leaveTo="-translate-y-10 opacity-0"
+        >
+          {playlistNotFound && (
+            <div className="flex w-auto justify-center rounded-b-md border-b-2 border-l-2 border-r-2 border-red-500 bg-red-400">
+              <span className="font-mono text-lg font-semibold text-slate-100 ">
+                Playlist Not Found
+              </span>
+            </div>
+          )}
+        </Transition.Child>
       </Transition>
     </div>
   );
 };
-
 export default NewPlaylistForm;
 
 const useCheckUrl = (inputValue: string) => {
+  // tRPC mutation url check
   const {
     mutate: checkUrl,
     data: urlIsValid,
@@ -87,23 +178,55 @@ const useCheckUrl = (inputValue: string) => {
 
 const useFetchPlaylistPreview = (
   url: string,
-  urlIsValid: boolean | undefined
+  urlIsValid: boolean | undefined,
+  spotifyAccessToken: string | undefined
 ) => {
-  const { data: spotifyAccessToken, isSuccess: tokenIsLoaded } =
-    api.spotify.getAccessToken.useQuery();
-
+  // tRPC fetch playlist preview
   const {
-    mutate,
-    data: playlist,
+    mutate: fetchPlaylistData,
+    data,
     isLoading,
     reset,
+    isError,
   } = api.spotify.fetchPlaylistPreview.useMutation();
 
+  // make a mutate call if url is valid and token is loaded
   const fetchPlaylistPreview = useCallback(() => {
-    if (tokenIsLoaded && urlIsValid) {
-      mutate({ url, spotifyAccessToken });
+    if (spotifyAccessToken && urlIsValid) {
+      fetchPlaylistData({ url, spotifyAccessToken });
     }
-  }, [tokenIsLoaded, urlIsValid, url, spotifyAccessToken, mutate]);
+  }, [urlIsValid, url, spotifyAccessToken, fetchPlaylistData]);
 
-  return { playlist, isLoading, reset, fetchPlaylistPreview };
+  return {
+    playlist: data?.playlistData,
+    alreadyExists: data?.alreadyExists,
+    isLoading,
+    reset,
+    fetchPlaylistPreview,
+    isError,
+  };
+};
+
+const useSavePlaylist = (
+  url: string,
+  urlIsValid: boolean | undefined,
+  spotifyAccessToken: string | undefined
+) => {
+  const { mutate, data, isSuccess, isLoading } =
+    api.spotify.savePlaylist.useMutation();
+
+  const savePlaylist = useCallback(() => {
+    if (spotifyAccessToken && urlIsValid) {
+      mutate({
+        url,
+        spotifyAccessToken,
+      });
+    }
+  }, [url, urlIsValid, spotifyAccessToken, mutate]);
+
+  return {
+    savePlaylist,
+    isSaved: isSuccess ? data : false,
+    savingPlaylist: isLoading,
+  };
 };
