@@ -9,7 +9,7 @@ import Link from "next/link";
 
 const NewPlaylistForm = () => {
   const [inputValue, setInputValue] = useState("");
-  const { urlIsValid, reset: resetUrlIsValid } = useCheckUrl(inputValue);
+  const { validUrl, reset: resetUrlIsValid } = useCheckUrl(inputValue);
   // fetch spotify access token
   const { data: spotifyAccessToken } = api.spotify.getAccessToken.useQuery();
   // Playlist preview hook
@@ -20,15 +20,14 @@ const NewPlaylistForm = () => {
     reset: resetPlaylistPreview,
     fetchPlaylistPreview,
     isError: playlistNotFound,
-  } = useFetchPlaylistPreview(inputValue, urlIsValid, spotifyAccessToken);
+  } = useFetchPlaylistPreview(validUrl, spotifyAccessToken);
   // Save playlist hook
   const { savePlaylist, savingPlaylist, isSaved } = useSavePlaylist(
-    inputValue,
-    urlIsValid,
+    validUrl,
     spotifyAccessToken
   );
 
-  useEffect(fetchPlaylistPreview, [urlIsValid, fetchPlaylistPreview]);
+  useEffect(fetchPlaylistPreview, [validUrl, fetchPlaylistPreview]);
 
   // check input url
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -45,8 +44,8 @@ const NewPlaylistForm = () => {
           className={`
           w-full border-2 transition-colors duration-500 ease-in-out 
           ${
-            typeof urlIsValid === "boolean"
-              ? urlIsValid && !playlistNotFound
+            typeof validUrl === "boolean"
+              ? validUrl && !playlistNotFound
                 ? "border-green-500"
                 : "border-red-500 text-red-500"
               : ""
@@ -79,7 +78,7 @@ const NewPlaylistForm = () => {
                 alt="Playlist Image"
               />
             )}
-            <div className="flex flex-col w-full">
+            <div className="flex w-full flex-col">
               <span className="">{playlist.name}</span>
               <div className="mt-auto flex gap-4">
                 <div className="ml-auto text-sm">
@@ -158,7 +157,7 @@ const useCheckUrl = (inputValue: string) => {
   // tRPC mutation url check
   const {
     mutate: checkUrl,
-    data: urlIsValid,
+    data: validUrl,
     reset: resetUrlIsValid,
   } = api.forms.spotifyUrlHandler.useMutation();
 
@@ -173,12 +172,11 @@ const useCheckUrl = (inputValue: string) => {
     };
   }, [inputValue, checkUrl]);
 
-  return { urlIsValid, reset: resetUrlIsValid };
+  return { validUrl, reset: resetUrlIsValid };
 };
 
 const useFetchPlaylistPreview = (
-  url: string,
-  urlIsValid: boolean | undefined,
+  validUrl: string | undefined,
   spotifyAccessToken: string | undefined
 ) => {
   // tRPC fetch playlist preview
@@ -192,10 +190,10 @@ const useFetchPlaylistPreview = (
 
   // make a mutate call if url is valid and token is loaded
   const fetchPlaylistPreview = useCallback(() => {
-    if (spotifyAccessToken && urlIsValid) {
-      fetchPlaylistData({ url, spotifyAccessToken });
+    if (spotifyAccessToken && validUrl) {
+      fetchPlaylistData({ url: validUrl, spotifyAccessToken });
     }
-  }, [urlIsValid, url, spotifyAccessToken, fetchPlaylistData]);
+  }, [validUrl, spotifyAccessToken, fetchPlaylistData]);
 
   return {
     playlist: data?.playlistData,
@@ -208,21 +206,20 @@ const useFetchPlaylistPreview = (
 };
 
 const useSavePlaylist = (
-  url: string,
-  urlIsValid: boolean | undefined,
+  validUrl: string | undefined,
   spotifyAccessToken: string | undefined
 ) => {
   const { mutate, data, isSuccess, isLoading } =
     api.spotify.savePlaylist.useMutation();
 
   const savePlaylist = useCallback(() => {
-    if (spotifyAccessToken && urlIsValid) {
+    if (spotifyAccessToken && validUrl) {
       mutate({
-        url,
+        url: validUrl,
         spotifyAccessToken,
       });
     }
-  }, [url, urlIsValid, spotifyAccessToken, mutate]);
+  }, [validUrl, spotifyAccessToken, mutate]);
 
   return {
     savePlaylist,

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { log } from "next-axiom";
 import { spotifyURLIsValid } from "./spotify";
+import { TRPCError } from "@trpc/server";
 
 export const formsRouter = createTRPCRouter({
   spotifyUrlHandler: publicProcedure
@@ -12,7 +13,7 @@ export const formsRouter = createTRPCRouter({
         return spotifyURLIsValid(url);
       } catch (e) {
         log.error(`URL construct error`)
-        return false
+        throw new TRPCError({code: "PARSE_ERROR"})
       }
     }),
 });

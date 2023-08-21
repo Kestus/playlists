@@ -39,7 +39,7 @@ export const spotifyRouter = createTRPCRouter({
   savePlaylist: publicProcedure
     .input(
       z.object({
-        url: z.string(),
+        url: z.string() ,
         spotifyAccessToken: z.string(),
       })
     )
@@ -126,10 +126,11 @@ const savePlaylist = async (url: URL, spotifyAccessToken: string) => {
   );
 
   log.info("Saving playlist...");
-  const playlist = playlistData.type === "album"
-    ? await saveAlbumAndTracks(playlistData, tracksData)
-    : await savePlaylistAndTracks(playlistData, tracksData);
-  return playlist.getId()
+  const playlist =
+    playlistData.type === "album"
+      ? await saveAlbumAndTracks(playlistData, tracksData)
+      : await savePlaylistAndTracks(playlistData, tracksData);
+  return playlist.getId();
 };
 
 // fetch playlist data and tracks
@@ -249,15 +250,15 @@ const getEndpoint = (url: URL) => {
 
 // check spotify url
 // example: https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
-export const spotifyURLIsValid = (url: URL) => {
+export const spotifyURLIsValid = (url: URL): string | undefined => {
   if (!url.hostname.includes("spotify.com")) {
-    return false;
+    return;
   }
   const path = url.pathname.split("/");
   if (path.length < 2 || !urlPathIsValid(path)) {
-    return false;
+    return;
   }
-  return true;
+  return url.toString();
 };
 
 const urlPathIsValid = (path: Array<string>) => {
@@ -268,5 +269,5 @@ const checkPlaylistAlreadySaved = async (spotifyId: string) => {
   const entry = await prisma.playlists.findFirst({
     where: { spotifyId: spotifyId },
   });
-  return entry?.id
+  return entry?.id;
 };
