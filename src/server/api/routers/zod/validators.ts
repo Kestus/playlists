@@ -41,6 +41,7 @@ const zodPlaylist = z.object({
   type: z.enum(["playlist", "album"]),
   genres: z.array(z.string()).nullish(),
   artists: z.array(zodArtist).nullish(),
+  alreadyExists: z.string().optional(),
 });
 
 const zodPlaylistItems = z.object({
@@ -54,6 +55,34 @@ const zodPlaylistItems = z.object({
 
 const zodArrayOfItems = z.array(z.object({ track: z.any() }));
 
+// const zodURLSearchParams = z.object({
+//   append: z.function(),
+//   delete: z.function(),
+//   entries: z.function(),
+//   get: z.function(),
+//   getAll: z.function(),
+//   has: z.function(),
+//   keys: z.function(),
+//   set: z.function(),
+//   sort: z.function(),
+//   toString: z.function(),
+// });
+
+const zodURL = z.object({
+  href: z.string(),
+  origin: z.string(),
+  protocol: z.string(),
+  username: z.string(),
+  password: z.string(),
+  host: z.string(),
+  hostname: z.string(),
+  port: z.string(),
+  pathname: z.string(),
+  search: z.string(),
+  // searchParams: zodURLSearchParams,
+  hash: z.string(),
+});
+
 export { zodPlaylist as playlistValidator };
 export type zodPlaylist = z.infer<typeof zodPlaylist>;
 export { zodPlaylistItems as playlistItemsValidator };
@@ -63,3 +92,6 @@ export type zodTrack = z.infer<typeof zodTrack>;
 
 export type zodArrayOfItems = z.infer<typeof zodArrayOfItems>;
 export type zodArtist = z.infer<typeof zodArtist>;
+
+export { zodURL };
+export type zodURL = z.infer<typeof zodURL>;

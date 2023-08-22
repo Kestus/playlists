@@ -1,7 +1,8 @@
-import { type Artists } from "@prisma/client";
-import { type dbEntry } from "./interface/dbEntry";
+import { Artists } from "@prisma/client";
+import { zodArtist } from "~/server/api/routers/zod/validators"
 
-export class Artist implements dbEntry {
+
+export class Artist {
   data: Artists;
 
   constructor(dbEntry: Artists) {
@@ -23,4 +24,12 @@ export class Artist implements dbEntry {
   }
 
   //TODO
+}
+
+export const batchSaveArtist = (artists: zodArtist[]) => {
+
+}
+
+const saveArtist = (artistData: zodArtist) => {
+
 }

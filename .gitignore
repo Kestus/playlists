@@ -40,7 +40,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-
+test.ts
 
 *_.json
 .vscode

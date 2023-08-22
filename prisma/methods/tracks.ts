@@ -2,8 +2,30 @@ import { Tracks } from "@prisma/client";
 import { log } from "next-axiom";
 import { zodArtist, zodTrack } from "~/server/api/routers/zod/validators";
 import { prisma } from "~/server/db";
-import { Track } from "~/server/models/track";
 import { mapArtistConnectOrCreate } from "~/utils/prisma";
+
+export class Track {
+  data: Tracks;
+
+  constructor(dbEntry: Tracks) {
+    this.data = dbEntry;
+  }
+
+  // getters
+  getName(): string {
+    return this.data.name;
+  }
+  getId() {
+    return this.data.id;
+  }
+  getSpotifyId() {
+    return this.data.spotifyId;
+  }
+  getImage() {
+    return null;
+  }
+}
+
 
 export const batchSaveTrack = async (tracksData: zodTrack[]) => {
   log.info(`Saving [${tracksData.length}] tracks...`);
@@ -57,3 +79,4 @@ const asyncSaveTrack = async (trackData: zodTrack) => {
 export const saveTrack = async (track: zodTrack) => {
   return new Track(await asyncSaveTrack(track));
 };
+

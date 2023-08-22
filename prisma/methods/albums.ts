@@ -1,9 +1,9 @@
 import { zodPlaylist, zodTrack } from "~/server/api/routers/zod/validators";
 import { prisma } from "~/server/db";
-import { Playlist } from "~/server/models/playlist";
-import { batchSaveTrack } from "./prismaTracks";
+import { batchSaveTrack } from "./tracks";
 import { mapArtistConnectOrCreate } from "~/utils/prisma";
 import { log } from "next-axiom";
+import { Playlist } from "./playlists";
 
 export const saveAlbumAndTracks = async (
   albumData: zodPlaylist,

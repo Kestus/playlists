@@ -1,6 +1,6 @@
 import type { NextPage } from "next";
+import NewPlaylistForm from "~/components/forms/newPlaylist";
 import Navbar from "~/components/navbar";
-import NewPlaylistForm from "~/components/newPlaylistForm";
 
 
 const NewPlaylistPage: NextPage = () => {
