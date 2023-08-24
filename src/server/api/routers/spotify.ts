@@ -3,12 +3,12 @@ import { createTRPCRouter, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import cookie from "cookie";
 import {
-  playlistItemsValidator,
-  playlistValidator,
-  trackValidator,
+  zodPlaylistItems,
+  zodPlaylist,
+  zodTrack,
   zodURL,
+  type zodArrayOfItems,
 } from "./zod/validators";
-import type { zodArrayOfItems, zodTrack } from "./zod/validators";
 import { savePlaylistAndTracks } from "prisma/methods/playlists";
 import { saveAlbumAndTracks } from "prisma/methods/albums";
 import { log } from "next-axiom";
@@ -37,17 +37,6 @@ export const spotifyRouter = createTRPCRouter({
     return newToken;
   }),
 
-  savePlaylist: publicProcedure
-    .input(
-      z.object({
-        url: zodURL,
-        spotifyAccessToken: z.string(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      return savePlaylist(input.url, input.spotifyAccessToken);
-    }),
-
   fetchPlaylistPreview: publicProcedure
     .input(
       z.object({
@@ -57,6 +46,17 @@ export const spotifyRouter = createTRPCRouter({
     )
     .mutation(({ input }) => {
       return fetchPlaylistData(input.url, input.spotifyAccessToken);
+    }),
+
+  savePlaylist: publicProcedure
+    .input(
+      z.object({
+        url: zodURL,
+        spotifyAccessToken: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return fetchSavePlaylist(input.url, input.spotifyAccessToken);
     }),
 });
 
@@ -106,7 +106,7 @@ export const fetchAccessToken = () => {
 };
 
 // fetch and save playlist
-const savePlaylist = async (url: zodURL, spotifyAccessToken: string) => {
+const fetchSavePlaylist = async (url: zodURL, spotifyAccessToken: string) => {
   const { playlistData, tracksData } = await fetchPlaylistAndTracksData(
     url,
     spotifyAccessToken
@@ -153,7 +153,7 @@ export const fetchPlaylistData = async (
   // fetch data
   const response = await fetchSpotify(playlistInfoEndPoint, options);
   // parse response
-  const playlistData = tryZodParse(response, playlistValidator);
+  const playlistData = tryZodParse(response, zodPlaylist);
   // check Playlist existence in DB
   playlistData.alreadyExists = await isAlreadyExists(playlistData.id);
 
@@ -178,7 +178,7 @@ const fetchTracksData = async (url: zodURL, spotifyAccessToken: string) => {
   const arrayOfTracks = new Array<zodTrack>();
   while (typeof nextTracksEndpoint === "string") {
     const response = await fetchSpotify(nextTracksEndpoint, options);
-    const parsedRes = playlistItemsValidator.parse(response);
+    const parsedRes = zodPlaylistItems.parse(response);
 
     nextTracksEndpoint = parsedRes.next;
     const newTracks = parseAndFilterTracks(parsedRes.items);
@@ -192,7 +192,7 @@ const fetchTracksData = async (url: zodURL, spotifyAccessToken: string) => {
 const parseAndFilterTracks = (items: zodArrayOfItems) => {
   const arrayOfTracks = new Array<zodTrack>();
   for (let i = 0; i < items.length; i++) {
-    const track = trackValidator.safeParse(items[i]?.track);
+    const track = zodTrack.safeParse(items[i]?.track);
     if (track.success) {
       arrayOfTracks.push(track.data);
     }

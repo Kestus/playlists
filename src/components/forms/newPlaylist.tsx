@@ -1,15 +1,17 @@
 import { type ChangeEvent, useState } from "react";
-import useCheckUrl from "./hooks/useCheckUrl";
-import useFetchPlaylistPreview from "./hooks/useFetchPlaylistPreview";
-import InputError from "../inputError";
+import { api } from "~/utils/api";
+import { useCheckUrl, useFetchPlaylistPreview } from "./hooks";
 
 // https://open.spotify.com/playlist/30zZTU35EaRXm0iOZm9rN7
 
 const NewPlaylistForm = () => {
+  const { data: spotifyAccessToken } = api.spotify.getAccessToken.useQuery();
   const [inputValue, setInputValue] = useState("");
   const { validUrl, resetUrl } = useCheckUrl(inputValue);
-  const { playlistPreview, notFound } = useFetchPlaylistPreview(validUrl);
-  // const {} = useSavePlaylist(spotifyAccessToken)
+  const { playlistPreview, notFound } = useFetchPlaylistPreview(
+    validUrl,
+    spotifyAccessToken as string
+  );
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -23,15 +25,13 @@ const NewPlaylistForm = () => {
           onChange={handleChange}
           className={`
         w-full border-2 transition-colors duration-500 ease-in-out 
-        ${validUrl === false ? "border-red-500 text-red-500" : ""}
-        ${notFound ? "border-red-500 text-red-500" : ""}
+        ${validUrl === false || notFound ? "border-red-500 text-red-500" : ""}
         ${!!validUrl ? "border-green-500 text-green-500" : ""}
         `}
           value={inputValue}
         />
       </form>
-      <span>{playlistPreview && `${playlistPreview.name}`}</span>
-      <InputError conditon={notFound} message="Playlist Not Found" />
+      {playlistPreview}
     </div>
   );
 };

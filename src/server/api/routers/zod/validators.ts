@@ -6,13 +6,13 @@ const zodImage = z.object({
   width: z.number().nullable(),
 });
 
-const zodArtist = z.object({
+export const zodArtist = z.object({
   id: z.string(),
   images: z.array(zodImage).optional(),
   name: z.string(),
 });
 
-const zodAlbum = z.object({
+export const zodAlbum = z.object({
   total_tracks: z.number().nullish(),
   id: z.string(),
   images: z.array(zodImage),
@@ -23,7 +23,7 @@ const zodAlbum = z.object({
   artists: z.array(zodArtist),
 });
 
-const zodTrack = z.object({
+export const zodTrack = z.object({
   album: zodAlbum,
   artists: z.array(zodArtist),
   id: z.string(),
@@ -32,7 +32,7 @@ const zodTrack = z.object({
   duration_ms: z.number(),
 });
 
-const zodPlaylist = z.object({
+export const zodPlaylist = z.object({
   total_tracks: z.number().optional(),
   id: z.string(),
   images: z.array(zodImage),
@@ -44,7 +44,7 @@ const zodPlaylist = z.object({
   alreadyExists: z.string().optional(),
 });
 
-const zodPlaylistItems = z.object({
+export const zodPlaylistItems = z.object({
   limit: z.number(),
   next: z.string().nullish(),
   offset: z.number(),
@@ -68,7 +68,7 @@ const zodArrayOfItems = z.array(z.object({ track: z.any() }));
 //   toString: z.function(),
 // });
 
-const zodURL = z.object({
+export const zodURL = z.object({
   href: z.string(),
   origin: z.string(),
   protocol: z.string(),
@@ -79,19 +79,13 @@ const zodURL = z.object({
   port: z.string(),
   pathname: z.string(),
   search: z.string(),
-  // searchParams: zodURLSearchParams,
   hash: z.string(),
+  // searchParams: zodURLSearchParams,
 });
 
-export { zodPlaylist as playlistValidator };
 export type zodPlaylist = z.infer<typeof zodPlaylist>;
-export { zodPlaylistItems as playlistItemsValidator };
 export type zodPlaylistItems = z.infer<typeof zodPlaylistItems>;
-export { zodTrack as trackValidator };
 export type zodTrack = z.infer<typeof zodTrack>;
-
+export type zodURL = z.infer<typeof zodURL>;
 export type zodArrayOfItems = z.infer<typeof zodArrayOfItems>;
 export type zodArtist = z.infer<typeof zodArtist>;
-
-export { zodURL };
-export type zodURL = z.infer<typeof zodURL>;

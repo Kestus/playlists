@@ -4,7 +4,7 @@ import { zodURL } from "~/server/api/routers/zod/validators";
 
 export type ValidUrl = zodURL | undefined | false;
 
-const useCheckUrl = (inputValue: string) => {  
+export const useCheckUrl = (inputValue: string) => {  
   const [validUrl, setValidUrl] = useState(undefined as ValidUrl);  
 
   // setters
@@ -51,8 +51,5 @@ const spotifyUrl = (spotifyUrl: zodURL): boolean => {
   if (path.length < 2) return false;
 
   if (!path[0]?.includes("playlist") && !path[0]?.includes("album")) return false;
-
   return true;
 };
-
-export default useCheckUrl;

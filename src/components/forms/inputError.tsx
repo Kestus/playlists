@@ -1,6 +1,9 @@
 import { Transition } from "@headlessui/react";
 
-const InputError = (params: { conditon: boolean | undefined; message: string; }) => {
+const InputError = (params: {
+  conditon: boolean | undefined;
+  message: string;
+}) => {
   return (
     <Transition
       show={params.conditon}
@@ -12,7 +15,7 @@ const InputError = (params: { conditon: boolean | undefined; message: string; })
       leaveTo="opacity-0"
     >
       {params.conditon && (
-        <div className="flex w-auto justify-center rounded-b-md border-b-2 border-l-2 border-r-2 border-red-500 bg-red-400">
+        <div className="flex w-auto justify-center rounded-md border-2 border-l-2 border-r-2 border-red-500 bg-red-400">
           <span className="font-mono text-lg font-semibold text-slate-100 ">
             {params.message}
           </span>
