@@ -3,13 +3,11 @@ import type { MouseEventHandler } from "react";
 interface inputOptions {
   onclick?: MouseEventHandler;
   loadingState?: boolean;
-  color?: string;
   message: string;
 }
 const Button = (input: inputOptions) => {
   const loadingState = input.loadingState ? input.loadingState : false;
-  const onClickHandler = input.onclick ? input.onclick : undefined
-  const color = input.color ? input.color : "cyan"  
+  const onClickHandler = input.onclick ? input.onclick : undefined;
 
   return (
     <button
@@ -23,18 +21,8 @@ const Button = (input: inputOptions) => {
                       transition-colors
                       duration-500
                       ease-out
-                      ${
-                        !!loadingState
-                          ? `border-grey-800 
-                          bg-grey-600
-                          hover:bg-grey-500
-                          cursor-wait
-                        `
-                          : `border-${color}-800 
-                          bg-${color}-600
-                          hover:bg-${color}-500
-                          `
-                      }
+                      ${!loadingState && `border-cyan-800 bg-cyan-600 hover:bg-cyan-500`}
+                      ${!!loadingState && `border-grey-800 bg-grey-600 hover:bg-grey-500 cursor-wait`}
                     `}
     >
       {input.message}
